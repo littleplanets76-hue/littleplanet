@@ -10,7 +10,7 @@ const sidebarLinks = [
   { label: "Parents", href: "/parents" },
   { label: "Students", href: "/students" },
   { label: "Teachers", href: "/teachers" },
-  { label: "Talent Hunt", href: "/talent-hunt" },
+  { label: "Talent Hunt", href: "/talenthunt" },
   { label: "Notice", href: "/notice" },
 ];
 
@@ -52,7 +52,7 @@ export default function Sidebar() {
             {sidebarLinks.map((link) => {
               const Icon = sidebarIcons[link.label];
               const isActive = router.pathname === link.href;
-              const isDisabled = link.label === "Teachers" || link.label === "Talent Hunt" || link.label === "Notice";
+              const isDisabled = link.label === "Teachers" || link.label === "Notice";
               return (
                 <li key={link.href}>
                   {!isDisabled ? (

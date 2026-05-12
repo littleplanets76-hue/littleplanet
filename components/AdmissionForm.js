@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import Swal from "sweetalert2";
 
+
+
 export default function AdmissionForm() {
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
