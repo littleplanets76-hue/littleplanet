@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 
 
 
-export default function AdmissionForm() {
+export default function AdmissionForm({ embedded = false }) {
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -62,8 +62,8 @@ export default function AdmissionForm() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto w-full space-y-8 bg-white p-6">
+    <div className={embedded ? "w-full" : "min-h-screen"}>
+      <div className={embedded ? "w-full space-y-8" : "mx-auto w-full space-y-8 bg-white p-6"}>
 
         <h1 className="text-2xl font-bold text-center">
           Quantum Heights Admission Form 2026 -2027
@@ -155,26 +155,37 @@ export default function AdmissionForm() {
         </Section>
 
         {/* SUBMIT */}
-        {/* Desktop/Tablet: normal button, Mobile: fixed at bottom */}
-        <div className="block md:hidden h-16" /> {/* Spacer for mobile fixed button */}
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full bg-black text-white py-3 rounded-xl hover:bg-gray-800 transition hidden md:block"
-        >
-          {loading ? "Submitting..." : "Submit Application"}
-        </button>
-        {/* Fixed button for mobile */}
-        <div className="md:hidden">
+        {embedded ? (
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="fixed bottom-0 left-0 w-full bg-black text-white py-4 rounded-none shadow-2xl z-40 text-lg"
-            style={{borderRadius: 0}}
+            className="w-full rounded-xl bg-black py-3 text-white transition hover:bg-gray-800"
           >
             {loading ? "Submitting..." : "Submit Application"}
           </button>
-        </div>
+        ) : (
+          <>
+            <div className="block h-16 md:hidden" />
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="hidden w-full rounded-xl bg-black py-3 text-white transition hover:bg-gray-800 md:block"
+            >
+              {loading ? "Submitting..." : "Submit Application"}
+            </button>
+
+            <div className="md:hidden">
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="fixed bottom-0 left-0 z-40 w-full rounded-none bg-black py-4 text-lg text-white shadow-2xl"
+                style={{ borderRadius: 0 }}
+              >
+                {loading ? "Submitting..." : "Submit Application"}
+              </button>
+            </div>
+          </>
+        )}
 
       </div>
     </div>

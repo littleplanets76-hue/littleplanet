@@ -12,7 +12,7 @@ import {
   FaFileInvoiceDollar,
   FaBoxes,
   FaChartBar,
-  FaMoneyBillWave
+  FaMoneyBillWave,
 } from "react-icons/fa";
 
 export const sidebarIcons = {
@@ -23,6 +23,7 @@ export const sidebarIcons = {
   Staff: FaChalkboardTeacher,
   Payroll: FaMoneyBillWave,
   Fees: FaFileInvoiceDollar,
+  Expenses: FaFileInvoiceDollar,
   Assets: FaBoxes,
   Reports: FaChartBar,
   "User Management": FaUsersCog,

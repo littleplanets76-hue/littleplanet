@@ -19,12 +19,24 @@ const sidebarLinks = [
   { label: "User Management", href: "/user-management" },
 ];
 
+const accountantSidebarLinks = [
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Admissions", href: "/admissions" },
+  { label: "Fees", href: "/fees" },
+  { label: "Expenses", href: "/expenses" },
+  { label: "Payroll", href: "/payroll" },
+  { label: "Reports", href: "/reports" },
+];
+
 // Maroon-red from logo: #8B1F1F
 export default function Sidebar({ user }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const visibleLinks = sidebarLinks.filter((link) => canAccessPath(user?.role, link.href));
+  const visibleLinks =
+    String(user?.role || "").toUpperCase() === "ACCOUNTANT"
+      ? accountantSidebarLinks.filter((link) => canAccessPath(user?.role, link.href))
+      : sidebarLinks.filter((link) => canAccessPath(user?.role, link.href));
 
   return (
     <>

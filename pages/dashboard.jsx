@@ -1,4 +1,5 @@
-import { FaUsers, FaClipboardList, FaRupeeSign, FaWallet, FaCalendarDay, FaReceipt, FaBoxes,FaBullhorn } from "react-icons/fa";
+import Link from "next/link";
+import { FaUsers, FaClipboardList, FaRupeeSign, FaWallet, FaCalendarDay, FaReceipt, FaBoxes, FaBullhorn, FaUserPlus, FaFileInvoiceDollar, FaRegCalendarCheck, FaChartLine, FaMoneyBillWave } from "react-icons/fa";
 import { getRoleLabel } from "@/lib/permissions";
 
 export async function getServerSideProps(context) {
@@ -26,6 +27,14 @@ const overviewCards = [
   ["Admissions pipeline", "Latest submissions and live application volume."],
   ["Fee tracking", "Daily collection, outstanding dues, and gross fee totals."],
   ["Operational spend", "Recent expenses surface quickly from the finance ledger."],
+];
+
+const financeShortcuts = [
+  { label: "Admission Form", href: "/admissions", icon: FaUserPlus, description: "Open the admissions form first." },
+  { label: "Fees Collection", href: "/fees", icon: FaFileInvoiceDollar, description: "Review dues and collect fees." },
+  { label: "Expenses Entry", href: "/expenses", icon: FaRegCalendarCheck, description: "Add and track expenses." },
+  { label: "Payroll", href: "/payroll", icon: FaMoneyBillWave, description: "Record and review payroll." },
+  { label: "Reports", href: "/reports", icon: FaChartLine, description: "View finance and operations reports." },
 ];
 
 function formatCurrency(value) {
@@ -160,6 +169,7 @@ export default function DashboardPage({
   totalAssets,
   alerts = 21,}) {
   const role = getRoleLabel(user?.role);
+  const isAccountant = role === "ACCOUNTANT";
   const statusSummary = admissionStatusCounts.filter((item) => Number(item.value || 0) > 0);
   const activeStatusCount = statusSummary.length;
   const topStatus = statusSummary[0];
@@ -174,13 +184,27 @@ export default function DashboardPage({
   ];
   const countMetricMax = getMetricMax(comparisonMetrics, "count");
   const currencyMetricMax = getMetricMax(comparisonMetrics, "currency");
+  const visibleMetricCards = isAccountant
+    ? metricCards.filter((item) => ["totalFees", "pendingFees", "todaysCollection", "expenses"].includes(item.key))
+    : metricCards;
+  const operationsSnapshot = isAccountant
+    ? [
+        ["Fees collected", formatCurrency(totalFees), "Collections posted from the fee ledger."],
+        ["Pending fees", formatCurrency(pendingFees), "Outstanding balances that still need follow-up."],
+        ["Today's cash in", formatCurrency(todaysCollection), "Payments collected for the current day."],
+      ]
+    : [
+        ["Students", formatCount(totalStudents), "Live student records available for class tracking."],
+        ["Admissions", formatCount(totalAdmissions), "Applications in the admissions table."],
+        ["Today's cash in", formatCurrency(todaysCollection), "Collections posted for the current day."],
+      ];
 
   return (
     <div className="space-y-6 p-4 md:p-6">
     
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {metricCards.map((item) => {
+        {visibleMetricCards.map((item) => {
           const Icon = item.icon;
           const metrics = {
             totalStudents,
@@ -223,6 +247,42 @@ export default function DashboardPage({
           );
         })}
       </section>
+
+      {isAccountant && (
+        <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Quick access</p>
+              <h3 className="mt-2 text-xl font-black text-slate-900">Finance entry points</h3>
+            </div>
+            <FaClipboardList className="text-2xl text-slate-400" />
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {financeShortcuts.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="group rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-lg"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{item.label}</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
+                    </div>
+                    <span className="rounded-2xl bg-[#8B1F1F]/10 p-3 text-[#8B1F1F] transition group-hover:bg-[#8B1F1F] group-hover:text-white">
+                      <Icon className="text-xl" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
@@ -374,11 +434,7 @@ export default function DashboardPage({
         <div className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-bold text-slate-900">Operations snapshot</h3>
           <div className="mt-4 grid gap-4">
-            {[
-              ["Students", formatCount(totalStudents), "Live student records available for class tracking."],
-              ["Admissions", formatCount(totalAdmissions), "Applications in the admissions table."],
-              ["Today's cash in", formatCurrency(todaysCollection), "Collections posted for the current day."],
-            ].map(([title, value, description]) => (
+            {operationsSnapshot.map(([title, value, description]) => (
               <div key={title} className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-sm font-semibold text-slate-900">{title}</p>
                 <p className="mt-2 text-2xl font-black text-slate-900">{value}</p>

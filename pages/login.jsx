@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { FaEye, FaEyeSlash, FaLock, FaUser } from "react-icons/fa";
+import Image from "next/image";
+import { FaEye, FaEyeSlash, FaLock, FaUser, FaGoogle, FaFacebook } from "react-icons/fa";
 import { getUserFromRequest } from "@/lib/auth";
 
 export async function getServerSideProps(context) {
@@ -16,6 +17,20 @@ export async function getServerSideProps(context) {
   }
 
   return { props: {} };
+}
+
+function Illustration() {
+  return (
+    <div className="relative h-96 w-96 overflow-hidden rounded-3xl shadow-2xl">
+      <Image
+        src="https://static.vecteezy.com/system/resources/previews/035/859/529/non_2x/3d-user-login-form-page-isolated-render-password-hidden-stars-in-sign-in-account-computer-data-protection-security-and-confidentiality-safety-encryption-and-privacy-illustration-vector.jpg"
+        alt="Student Login Illustration"
+        fill
+        className="object-contain brightness-110 contrast-125"
+        priority
+      />
+    </div>
+  );
 }
 
 export default function LoginPage() {
@@ -55,108 +70,97 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl backdrop-blur md:grid-cols-[1.1fr_0.9fr]">
-        <div className="relative flex flex-col justify-between bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-8 md:p-12">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(148,163,184,0.25),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(15,23,42,0.5),transparent_30%)]" />
-          <div className="relative z-10">
-            <div className="inline-flex rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-300">
-              Secure Access
-            </div>
-            <h1 className="mt-6 max-w-xl text-4xl font-black leading-tight text-white sm:text-5xl">
-              Sign in to your Quantum Admissions dashboard.
-            </h1>
-            <p className="mt-4 max-w-lg text-base leading-7 text-slate-300">
-              JWT sessions are stored in HttpOnly cookies, so refreshes keep you logged in while the dashboard stays protected.
-            </p>
+    <div className="min-h-screen bg-linear-to-br from-blue-100 via-blue-50 to-indigo-100">
+      <div className="mx-auto min-h-screen max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid min-h-screen items-center gap-8 md:grid-cols-2">
+          {/* Left side - Illustration */}
+          <div className="hidden flex-col items-center justify-center md:flex">
+            <Illustration />
           </div>
 
-          <div className="relative z-10 grid gap-4 sm:grid-cols-3">
-            {[
-              ["JWT", "HttpOnly cookie session"],
-              ["RBAC", "Role-aware access"],
-              ["Neon", "PostgreSQL backed auth"],
-            ].map(([title, copy]) => (
-              <div key={title} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-sm font-semibold text-white">{title}</p>
-                <p className="mt-1 text-sm text-slate-300">{copy}</p>
+          {/* Right side - Login Form */}
+          <div className="flex flex-col items-center justify-center">
+            <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl md:p-12">
+              <div className="mb-8">
+                <h1 className="text-3xl font-black text-blue-900">School Login</h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  Stay connected to manage admissions, fees, and operations.
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
 
-        <div className="flex items-center justify-center bg-slate-50 p-8 md:p-12">
-          <form
-            onSubmit={handleSubmit}
-            className="w-full max-w-md rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-[0_20px_60px_rgba(15,23,42,0.12)]"
-          >
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-slate-900">Welcome back</h2>
-              <p className="mt-2 text-sm text-slate-500">Use your staff credentials to continue.</p>
-            </div>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Username Field */}
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
+                    Username / Email
+                  </label>
+                  <div className="flex items-center rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-blue-500 focus-within:bg-blue-50">
+                    <FaUser className="text-slate-400" />
+                    <input
+                      value={username}
+                      onChange={(event) => setUsername(event.target.value)}
+                      className="w-full bg-transparent px-3 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                      placeholder="Enter your username"
+                      autoComplete="username"
+                      required
+                    />
+                  </div>
+                </div>
 
-            <label className="mb-4 block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">Username</span>
-              <div className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 focus-within:border-slate-900">
-                <FaUser className="text-slate-400" />
-                <input
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  className="w-full bg-transparent px-3 py-4 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                  placeholder="Enter username"
-                  autoComplete="username"
-                />
-              </div>
-            </label>
+                {/* Password Field */}
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
+                    Password
+                  </label>
+                  <div className="flex items-center rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-blue-500 focus-within:bg-blue-50">
+                    <FaLock className="text-slate-400" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      className="w-full bg-transparent px-3 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((value) => !value)}
+                      className="rounded-lg p-2 text-slate-500 transition hover:text-slate-900"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                    </button>
+                  </div>
+                </div>
 
-            <label className="mb-2 block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">Password</span>
-              <div className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 focus-within:border-slate-900">
-                <FaLock className="text-slate-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="w-full bg-transparent px-3 py-4 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                  placeholder="Enter password"
-                  autoComplete="current-password"
-                />
+                {/* Error Message */}
+                {error && (
+                  <div className="rounded-2xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                {/* Forgot Password Link */}
+                <div className="text-right">
+                  <a href="#" className="text-xs font-semibold text-blue-600 transition hover:text-blue-700">
+                    Having trouble to sign in?
+                  </a>
+                </div>
+
+                {/* Login Button */}
                 <button
-                  type="button"
-                  onClick={() => setShowPassword((value) => !value)}
-                  className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-2xl bg-blue-600 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  {loading ? "Signing in..." : "Login In"}
                 </button>
-              </div>
-            </label>
+              </form>
 
-            <div className="mb-4 flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input type="checkbox" className="rounded border-slate-300 text-slate-900 focus:ring-slate-900" />
-                Remember this device
-              </label>
+          
             </div>
-
-            {error ? (
-              <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                {error}
-              </div>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-
-            <p className="mt-6 text-center text-xs leading-6 text-slate-500">
-              Protected by JWT authentication and HttpOnly cookies.
-            </p>
-          </form>
+          </div>
         </div>
       </div>
     </div>
