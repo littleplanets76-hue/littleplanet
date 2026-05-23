@@ -13,14 +13,14 @@ export async function getServerSideProps(context) {
 }
 
 const metricCards = [
-  { label: "Total students", key: "totalStudents", icon: FaUsers, tone: "from-sky-50 to-cyan-50 text-sky-700", type: "count" },
-  { label: "Total fees", key: "totalFees", icon: FaRupeeSign, tone: "from-emerald-50 to-teal-50 text-emerald-700", type: "currency" },
-  { label: "Pending fees", key: "pendingFees", icon: FaWallet, tone: "from-amber-50 to-orange-50 text-amber-700", type: "currency" },
-  { label: "Today's collection", key: "todaysCollection", icon: FaCalendarDay, tone: "from-violet-50 to-fuchsia-50 text-violet-700", type: "currency" },
-  { label: "Expenses", key: "expenses", icon: FaReceipt, tone: "from-rose-50 to-pink-50 text-rose-700", type: "currency" },
-  { label: "Salaries", key: "salaries", icon: FaReceipt, tone: "from-blue-50 to-blue-100 text-blue-700", type: "currency" },
-  { label: "Total Assets", key: "totalAssets", icon: FaBoxes, tone: "from-green-50 to-green-100 text-green-700", type: "count" },
-  { label: "Alerts", key: "alerts", icon: FaBullhorn, tone: "from-yellow-50 to-amber-100 text-amber-700", type: "count" },
+  { label: "Total students", key: "totalStudents", href: "/students", icon: FaUsers, tone: "from-sky-50 to-cyan-50 text-sky-700", type: "count" },
+  { label: "Total fees", key: "totalFees", href: "/fees", icon: FaRupeeSign, tone: "from-emerald-50 to-teal-50 text-emerald-700", type: "currency" },
+  { label: "Pending fees", key: "pendingFees", href: "/fees", icon: FaWallet, tone: "from-amber-50 to-orange-50 text-amber-700", type: "currency" },
+  { label: "Today's collection", key: "todaysCollection", href: "/fees", icon: FaCalendarDay, tone: "from-violet-50 to-fuchsia-50 text-violet-700", type: "currency" },
+  { label: "Expenses", key: "expenses", href: "/expenses", icon: FaReceipt, tone: "from-rose-50 to-pink-50 text-rose-700", type: "currency" },
+  { label: "Salaries", key: "salaries", href: "/payroll", icon: FaReceipt, tone: "from-blue-50 to-blue-100 text-blue-700", type: "currency" },
+  { label: "Total Assets", key: "totalAssets", href: "/assets", icon: FaBoxes, tone: "from-green-50 to-green-100 text-green-700", type: "count" },
+  { label: "Alerts", key: "alerts", href: "/alerts", icon: FaBullhorn, tone: "from-yellow-50 to-amber-100 text-amber-700", type: "count" },
 ];
 
 const overviewCards = [
@@ -219,8 +219,9 @@ export default function DashboardPage({
           };
 
           return (
-            <div
+            <Link
               key={item.label}
+              href={item.href}
               className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
             >
               <div className="flex items-start justify-between gap-4">
@@ -242,8 +243,9 @@ export default function DashboardPage({
                 {item.key === "expenses" && "Expense outflow captured from the finance ledger."}
                 {item.key === "salaries" && "Total salary payments (auto-detected)."}
                 {item.key === "totalAssets" && "Assets currently tracked across school operations."}
+                {item.key === "alerts" && "Important notices and pending action items."}
               </p>
-            </div>
+            </Link>
           );
         })}
       </section>
@@ -318,7 +320,7 @@ export default function DashboardPage({
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Admissions flow</p>
-              <h3 className="mt-2 text-xl font-black text-slate-900">Current pipeline</h3>
+              <h3 className="mt-2 text-xl font-black text-slate-900">Academic year : 2026-2027</h3>
             </div>
           </div>
 

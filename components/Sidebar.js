@@ -14,7 +14,9 @@ const sidebarLinks = [
   { label: "Staff", href: "/staff" },
   { label: "Payroll", href: "/payroll" },
   { label: "Fees", href: "/fees" },
+  { label: "Expenses", href: "/expenses" },
   { label: "Assets", href: "/assets" },
+  { label: "Alerts", href: "/alerts" },
   { label: "Reports", href: "/reports" },
   { label: "User Management", href: "/user-management" },
 ];
@@ -23,8 +25,12 @@ const accountantSidebarLinks = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Admissions", href: "/admissions" },
   { label: "Fees", href: "/fees" },
+  { label: "Transactions", href: "/transactions" },
+  { label: "Cash / Bank", href: "/bank-cash" },
+  { label: "Reconciliation", href: "/reconciliation" },
   { label: "Expenses", href: "/expenses" },
   { label: "Payroll", href: "/payroll" },
+  { label: "Alerts", href: "/alerts" },
   { label: "Reports", href: "/reports" },
 ];
 

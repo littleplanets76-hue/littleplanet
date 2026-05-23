@@ -17,7 +17,6 @@ export default function StudentsTable({ students }) {
             <th className="py-2 px-4 text-center">Religion</th>
             <th className="py-2 px-4 text-center">Medium</th>
             <th className="py-2 px-4 text-center">Admission ID</th>
-            <th className="py-2 px-4 text-center">Student Unique ID</th>
             <th className="py-2 px-4 text-center">Created At</th>
           </tr>
         </thead>
@@ -36,7 +35,6 @@ export default function StudentsTable({ students }) {
                 <td className="py-2 px-4 text-center">{student.religion || '-'}</td>
                 <td className="py-2 px-4 text-center">{student.medium || '-'}</td>
                 <td className="py-2 px-4 text-center">{student.admission_id || '-'}</td>
-                <td className="py-2 px-4 text-center">{student.student_unique_id || '-'}</td>
                 <td className="py-2 px-4 text-center">{formatDateTime(student.created_at)}</td>
               </tr>
             ))

@@ -1,8 +1,24 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import Image from "next/image";
-import { FaEye, FaEyeSlash, FaLock, FaUser, FaGoogle, FaFacebook } from "react-icons/fa";
 import { getUserFromRequest } from "@/lib/auth";
+import Image from "next/image";
+const DEMO_WHATSAPP_CODE = "482916";
+
+const LOGIN_THEME = {
+  primary: "#6968aa",
+  primarySoft: "#f3f2ff",
+  accent: "#ffd6ff",
+  accentSoft: "#f3f2ff",
+  ink: "#000000",
+  muted: "#6b7280",
+  surface: "#ffffff",
+};
+
+const WHATSAPP_THEME = {
+  primary: "#25d366",
+  primaryDark: "#128c7e",
+  soft: "#eafaf1",
+};
 
 export async function getServerSideProps(context) {
   const user = await getUserFromRequest(context.req);
@@ -19,27 +35,323 @@ export async function getServerSideProps(context) {
   return { props: {} };
 }
 
-function Illustration() {
+function PositivePrimeLogo() {
   return (
-    <div className="relative h-96 w-96 overflow-hidden rounded-3xl shadow-2xl">
+  <div className="relative h-42.5 w-57.5">
       <Image
-        src="https://static.vecteezy.com/system/resources/previews/035/859/529/non_2x/3d-user-login-form-page-isolated-render-password-hidden-stars-in-sign-in-account-computer-data-protection-security-and-confidentiality-safety-encryption-and-privacy-illustration-vector.jpg"
-        alt="Student Login Illustration"
+        src="/accountslogo.png"
+        alt="SmartBooks AI Logo"
         fill
-        className="object-contain brightness-110 contrast-125"
         priority
+        className="object-contain object-left"
       />
+    </div>
+  );
+}function WhatsAppIcon({ className = "h-5 w-5" }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M16.04 3C9.46 3 4.1 8.26 4.1 14.74c0 2.08.56 4.12 1.62 5.9L4 29l8.56-1.68a12.1 12.1 0 0 0 3.48.51c6.58 0 11.94-5.26 11.94-11.74S22.62 3 16.04 3Zm0 22.77c-1.14 0-2.26-.18-3.32-.55l-.48-.16-5.08 1 1.02-4.9-.25-.5a9.71 9.71 0 0 1-1.36-4.92c0-5.34 4.25-9.68 9.47-9.68 5.22 0 9.47 4.34 9.47 9.68s-4.25 10.03-9.47 10.03Zm5.47-7.25c-.3-.15-1.78-.87-2.06-.97-.28-.1-.48-.15-.68.15-.2.3-.78.97-.96 1.17-.18.2-.35.22-.65.07-.3-.15-1.27-.46-2.42-1.48-.9-.78-1.5-1.75-1.68-2.05-.18-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.08-.15-.68-1.62-.93-2.22-.25-.58-.5-.5-.68-.51h-.58c-.2 0-.52.07-.8.37-.28.3-1.05 1.02-1.05 2.48s1.08 2.88 1.23 3.08c.15.2 2.13 3.23 5.16 4.52.72.31 1.28.5 1.72.64.72.23 1.38.2 1.9.12.58-.09 1.78-.72 2.03-1.42.25-.7.25-1.3.18-1.42-.08-.12-.28-.2-.58-.35Z" />
+    </svg>
+  );
+}
+
+function EyeIcon({ visible }) {
+  return (
+    <div
+      className={`transition-all duration-300 ${
+        visible
+          ? "rotate-0 scale-110 text-[#6968aa]"
+          : "rotate-[-8deg] scale-100 text-[#9ca3af]"
+      }`}
+    >
+      {visible ? (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      ) : (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M3 3l18 18"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M10.6 10.6A2 2 0 0012 14a2 2 0 001.4-.6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M6.5 6.8C3.8 8.5 2 12 2 12s3.5 6 10 6c1.8 0 3.4-.5 4.7-1.2"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M21.7 12.4S18.5 6 12 6c-.8 0-1.6.1-2.3.3"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+    </div>
+  );
+}
+
+function WhatsAppFlowModal({
+  open,
+  phone,
+  setPhone,
+  code,
+  setCode,
+  stage,
+  setStage,
+  busy,
+  setBusy,
+  error,
+  setError,
+  onClose,
+}) {
+  if (!open) {
+    return null;
+  }
+
+  async function handleSendCode(event) {
+    event.preventDefault();
+    setError("");
+
+    if (!phone.trim()) {
+      setError("Enter a username or WhatsApp number to continue.");
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      setStage("verify");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleVerifyCode(event) {
+    event.preventDefault();
+    setError("");
+
+    if (code.trim().length !== 6) {
+      setError("Enter the 6-digit code sent to WhatsApp.");
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+
+      if (code.trim() !== DEMO_WHATSAPP_CODE) {
+        setError("That code does not match the demo WhatsApp message.");
+        return;
+      }
+
+      setStage("success");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071714]/60 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-140 overflow-hidden rounded-4xl border border-white/60 bg-white shadow-[0_30px_100px_rgba(6,20,18,0.28)]">
+        <div
+          className="px-6 py-5 text-white sm:px-8"
+          style={{
+            background: `linear-gradient(135deg, ${LOGIN_THEME.primary} 0%, #7d7ac0 56%, ${LOGIN_THEME.accent} 100%)`,
+          }}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-white/80">
+                Secure recovery
+              </p>
+              <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
+                {stage === "verify" ? "Enter the code" : stage === "success" ? "Code verified" : "Recover access on WhatsApp"}
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full bg-white/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/25"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-6 px-6 py-6 sm:px-8">
+          <div className="rounded-3xl border border-[#e0def6] bg-[#f8f7ff] p-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#5e5c9a]">
+              WhatsApp recovery
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[#5a587f]">
+              We&apos;ll send a one-time code to your mobile number on WhatsApp. Enter that code here to continue.
+            </p>
+          </div>
+
+          <form onSubmit={stage === "verify" ? handleVerifyCode : handleSendCode} className="space-y-4">
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-[#1f1f2d]">
+                Mobile number
+              </span>
+              <input
+                value={phone}
+                onChange={(event) => {
+                  setPhone(event.target.value);
+                  setError("");
+                }}
+                placeholder="Enter your mobile number"
+                className="h-14.5 w-full rounded-2xl border border-[#e0def6] bg-white px-4 text-base text-[#111827] outline-none transition focus:border-[#6968aa] focus:shadow-[0_0_0_4px_rgba(105,104,170,0.12)]"
+                autoComplete="tel"
+                inputMode="tel"
+              />
+            </label>
+
+            {stage === "verify" && (
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-[#1f1f2d]">
+                  6-digit code
+                </span>
+                <input
+                  value={code}
+                  onChange={(event) => {
+                    setCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+                    setError("");
+                  }}
+                  placeholder="Enter the code"
+                  className="h-14.5 w-full rounded-2xl border border-[#e0def6] bg-white px-4 text-base tracking-[0.35em] text-[#111827] outline-none transition focus:border-[#6968aa] focus:shadow-[0_0_0_4px_rgba(105,104,170,0.12)]"
+                  inputMode="numeric"
+                  maxLength={6}
+                />
+              </label>
+            )}
+
+            {error && (
+              <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </div>
+            )}
+
+            {stage === "verify" && !error && (
+              <div className="rounded-2xl border border-[#dff2e6] bg-[#f2fff6] px-4 py-3 text-sm text-[#2c6b44]">
+                Code sent to WhatsApp ending in <span className="font-semibold">{phone.trim().slice(-2) || "••"}</span>.
+                Use demo code <span className="font-semibold">{DEMO_WHATSAPP_CODE}</span>.
+              </div>
+            )}
+
+            {stage === "success" && (
+              <div className="rounded-2xl border border-[#dff2e6] bg-[#f2fff6] px-4 py-3 text-sm text-[#2c6b44]">
+                Code accepted. You can return to login and continue.
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-13 rounded-full border border-[#d8d6ef] px-6 text-sm font-semibold text-[#1f1f2d] transition hover:bg-[#f3f2ff]"
+              >
+                Cancel
+              </button>
+
+              {stage === "verify" ? (
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="flex h-13 items-center gap-2 rounded-full px-6 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
+                  style={{ backgroundColor: WHATSAPP_THEME.primary }}
+                >
+                  <WhatsAppIcon className="h-5 w-5" />
+                  {busy ? "Checking..." : "Verify on WhatsApp"}
+                </button>
+              ) : stage === "success" ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="h-13 rounded-full px-6 text-sm font-semibold text-white transition hover:opacity-95"
+                  style={{ backgroundColor: WHATSAPP_THEME.primaryDark }}
+                >
+                  Back to login
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="flex h-13 items-center gap-2 rounded-full px-6 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
+                  style={{ backgroundColor: WHATSAPP_THEME.primary }}
+                >
+                  <WhatsAppIcon className="h-5 w-5" />
+                  {busy ? "Sending..." : "Send code on WhatsApp"}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function LoginPage() {
   const router = useRouter();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotStage, setForgotStage] = useState("request");
+  const [forgotPhone, setForgotPhone] = useState("");
+  const [forgotCode, setForgotCode] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  function openForgotFlow(event) {
+    event.preventDefault();
+    setForgotOpen(true);
+    setForgotStage("request");
+    setForgotPhone(username);
+    setForgotCode("");
+    setForgotError("");
+    setForgotBusy(false);
+  }
+
+  function closeForgotFlow() {
+    setForgotOpen(false);
+    setForgotStage("request");
+    setForgotPhone("");
+    setForgotCode("");
+    setForgotError("");
+    setForgotBusy(false);
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -70,99 +382,130 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-100 via-blue-50 to-indigo-100">
-      <div className="mx-auto min-h-screen max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid min-h-screen items-center gap-8 md:grid-cols-2">
-          {/* Left side - Illustration */}
-          <div className="hidden flex-col items-center justify-center md:flex">
-            <Illustration />
+    <main
+      className="min-h-screen overflow-hidden"
+      style={{ backgroundColor: LOGIN_THEME.surface }}
+    >
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[44%_56%]">
+        <section
+          className="relative hidden overflow-hidden lg:block"
+          style={{ background: `linear-gradient(160deg, ${LOGIN_THEME.primary} 0%, #7774b9 48%, #5f5ea1 100%)` }}
+        >
+          <div className="absolute left-5 top-8 z-20">
+            <PositivePrimeLogo />
           </div>
 
-          {/* Right side - Login Form */}
-          <div className="flex flex-col items-center justify-center">
-            <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl md:p-12">
-              <div className="mb-8">
-                <h1 className="text-3xl font-black text-blue-900">School Login</h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  Stay connected to manage admissions, fees, and operations.
-                </p>
-              </div>
+          <div className="absolute -right-40 -top-24 h-120 w-120 rounded-full border-95 border-[#ffd6ff]"></div>
+          <div className="absolute -right-15 top-30 h-44 w-44 rotate-45 bg-[#ffd6ff]"></div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Username Field */}
+          <div className="absolute -bottom-72 -left-40 h-130 w-130 rounded-full bg-[#7774b9]/55"></div>
+          <div className="absolute -bottom-56 -left-64 h-125 w-125 rounded-full bg-[#5f5ea1]/45"></div>
+
+          <div className="absolute bottom-12 left-10 z-20 text-white">
+            <p className="text-3xl font-semibold text-white/92">Hey,</p>
+            <p className="mt-4 text-3xl font-semibold text-white/92">Welcome To</p>
+            <p className="mt-4 text-3xl font-semibold text-white">SmartBooks Ai</p>
+          </div>
+        </section>
+
+        <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-6">
+          <div className="relative w-full max-w-215 rounded-4xl border border-white/70 bg-white/80 p-6 shadow-[0_30px_90px_rgba(16,36,31,0.12)] backdrop-blur xl:p-10">
+            <div className="mx-auto w-full max-w-175">
+              <div className="mb-10 flex items-center justify-between gap-4">
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
-                    Username / Email
-                  </label>
-                  <div className="flex items-center rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-blue-500 focus-within:bg-blue-50">
-                    <FaUser className="text-slate-400" />
-                    <input
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
-                      className="w-full bg-transparent px-3 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                      placeholder="Enter your username"
-                      autoComplete="username"
-                      required
-                    />
-                  </div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.28em]" style={{ color: LOGIN_THEME.muted }}>
+                    Secure access
+                  </p>
+                  <h1 className="mt-3 text-4xl font-extrabold sm:text-5xl" style={{ color: LOGIN_THEME.ink }}>
+                    Login
+                  </h1>
                 </div>
 
-                {/* Password Field */}
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
-                    Password
-                  </label>
-                  <div className="flex items-center rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3 transition focus-within:border-blue-500 focus-within:bg-blue-50">
-                    <FaLock className="text-slate-400" />
+                <div
+                  className="hidden rounded-full px-4 py-2 text-sm font-semibold sm:block"
+                  style={{ backgroundColor: LOGIN_THEME.accentSoft, color: LOGIN_THEME.ink }}
+                >
+                Smart Accounting
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-6 sm:space-y-8">
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    placeholder="Username"
+                    autoComplete="username"
+                    required
+                    className="h-19 w-full rounded-3xl border border-[#e0def6] bg-white px-6 text-lg text-[#111827] shadow-[0_10px_30px_rgba(105,104,170,0.10)] outline-none transition-all duration-300 placeholder:text-[#9ca3af] focus:border-[#6968aa] focus:shadow-[0_12px_32px_rgba(105,104,170,0.18)]"
+                  />
+
+                  <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
-                      className="w-full bg-transparent px-3 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                      placeholder="Enter your password"
+                      placeholder="Password"
                       autoComplete="current-password"
                       required
+                      className="h-19 w-full rounded-3xl border border-[#e0def6] bg-white px-6 pr-20 text-lg text-[#111827] shadow-[0_10px_30px_rgba(105,104,170,0.10)] outline-none transition-all duration-300 placeholder:text-[#9ca3af] focus:border-[#6968aa] focus:shadow-[0_12px_32px_rgba(105,104,170,0.18)]"
                     />
+
                     <button
                       type="button"
                       onClick={() => setShowPassword((value) => !value)}
-                      className="rounded-lg p-2 text-slate-500 transition hover:text-slate-900"
+                      className="absolute right-5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95"
+                      style={{ backgroundColor: LOGIN_THEME.primarySoft }}
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                      <EyeIcon visible={showPassword} />
                     </button>
                   </div>
                 </div>
 
-                {/* Error Message */}
+                <div className="mt-8 flex items-center justify-end text-base">
+                  <button type="button" onClick={openForgotFlow} className="font-semibold transition" style={{ color: LOGIN_THEME.primary }}>
+                    Forgot Password ?
+                  </button>
+                </div>
+
                 {error && (
-                  <div className="rounded-2xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  <div className="mt-6 rounded-2xl bg-red-50 px-5 py-3 text-center text-sm font-medium text-red-600">
                     {error}
                   </div>
                 )}
 
-                {/* Forgot Password Link */}
-                <div className="text-right">
-                  <a href="#" className="text-xs font-semibold text-blue-600 transition hover:text-blue-700">
-                    Having trouble to sign in?
-                  </a>
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="h-18 w-full max-w-[320px] rounded-full text-xl font-bold text-white shadow-[0_16px_30px_rgba(15,118,110,0.28)] transition-all duration-300 hover:scale-[1.03] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    style={{ backgroundColor: LOGIN_THEME.primary }}
+                  >
+                    {loading ? "LOGGING IN..." : "LOGIN"}
+                  </button>
                 </div>
-
-                {/* Login Button */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full rounded-2xl bg-blue-600 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loading ? "Signing in..." : "Login In"}
-                </button>
               </form>
-
-          
             </div>
           </div>
-        </div>
+        </section>
       </div>
-    </div>
+
+      <WhatsAppFlowModal
+        open={forgotOpen}
+        phone={forgotPhone}
+        setPhone={setForgotPhone}
+        code={forgotCode}
+        setCode={setForgotCode}
+        stage={forgotStage}
+        setStage={setForgotStage}
+        busy={forgotBusy}
+        setBusy={setForgotBusy}
+        error={forgotError}
+        setError={setForgotError}
+        onClose={closeForgotFlow}
+      />
+    </main>
   );
 }

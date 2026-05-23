@@ -17,9 +17,13 @@ export default function App({ Component, pageProps }) {
     if (router.pathname === "/staff") return "Staff";
     if (router.pathname === "/payroll") return "Staff";
     if (router.pathname === "/fees") return "Fees";
+    if (router.pathname === "/transactions") return "Transactions";
+    if (router.pathname === "/bank-cash") return "Cash / Bank";
+    if (router.pathname === "/reconciliation") return "Reconciliation";
     if (router.pathname === "/expenses") return "Expenses";
     if (router.pathname === "/assets") return "Assets";
     if (router.pathname === "/reports") return "Reports";
+    if (router.pathname === "/alerts") return "Alerts";
     if (router.pathname === "/user-management") return "User Management";
     if (router.pathname === "/school-profile") return "School Profile";
     return "Quantum Admissions";

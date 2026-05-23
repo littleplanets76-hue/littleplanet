@@ -121,7 +121,7 @@ export default function Admissions() {
   }, [admissions]);
 
   return (
-    <div className="p-4 md:p-6">
+    <div >
       <div className="rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-6 md:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -182,8 +182,9 @@ export default function Admissions() {
                     <th className="border-b border-slate-200 px-4 py-3">Program</th>
                     <th className="border-b border-slate-200 px-4 py-3">Parent</th>
                     <th className="border-b border-slate-200 px-4 py-3">Status</th>
-                    <th className="border-b border-slate-200 px-4 py-3">Fees</th>
-                  </tr>
+<th className="border-b border-slate-200 px-4 py-3">Total Fees</th>
+<th className="border-b border-slate-200 px-4 py-3">Discount</th>
+<th className="border-b border-slate-200 px-4 py-3">Final Fee</th>                  </tr>
                 </thead>
                 <tbody>
                   {filteredAdmissions.map((admission) => (
@@ -209,9 +210,17 @@ export default function Admissions() {
                           {admission.admission_status || "NEW"}
                         </span>
                       </td>
-                      <td className="border-b border-slate-100 px-4 py-4 text-sm text-slate-500">
-                        {formatCurrency(admission.fees)}
-                      </td>
+                    <td className="border-b border-slate-100 px-4 py-4 text-sm font-semibold text-slate-700">
+  {formatCurrency(admission.fees)}
+</td>
+
+<td className="border-b border-slate-100 px-4 py-4 text-sm font-semibold text-red-600">
+  {Number(admission.discount || 0)}%
+</td>
+
+<td className="border-b border-slate-100 px-4 py-4 text-sm font-black text-emerald-700">
+  {formatCurrency(admission.final_fee)}
+</td>
                     </tr>
                   ))}
                 </tbody>

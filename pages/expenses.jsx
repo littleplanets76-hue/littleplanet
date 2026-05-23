@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaReceipt, FaPlus, FaRupeeSign, FaTags, FaCalendarAlt } from "react-icons/fa";
 import { withAuthPage } from "@/lib/withAuthPage";
 
@@ -13,12 +13,6 @@ const initialForm = {
   receipt_file_name: "",
 };
 
-const defaultExpenses = [
-  { id: 1, title: "Stationery purchase", category: "Office", date: "2026-05-17", amount: 4500, notes: "Books, paper, markers" },
-  { id: 2, title: "Transport fuel", category: "Transport", date: "2026-05-16", amount: 3200, notes: "Bus fuel refill" },
-  { id: 3, title: "Cleaning supplies", category: "Maintenance", date: "2026-05-15", amount: 1800, notes: "Cleaning materials" },
-];
-
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -29,12 +23,38 @@ function formatCurrency(value) {
 
 export default function ExpensesPage() {
   const [form, setForm] = useState(initialForm);
-  const [expenses, setExpenses] = useState(defaultExpenses);
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const totalExpense = useMemo(
     () => expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0),
     [expenses]
   );
+
+  async function fetchExpenses() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/expenses");
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Unable to load expenses");
+      }
+
+      setExpenses(data.expenses || []);
+    } catch (fetchError) {
+      setError(fetchError.message || "Unable to load expenses");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -50,27 +70,38 @@ export default function ExpensesPage() {
     }));
   }
 
-  function addExpense(event) {
+  async function addExpense(event) {
     event.preventDefault();
 
     if (!form.title || !form.category || !form.amount) {
       return;
     }
 
-    setExpenses((current) => [
-      {
-        id: Date.now(),
-        title: form.title,
-        category: form.category,
-        date: form.date,
-        amount: Number(form.amount),
-        notes: form.notes,
-          receipt_file_name: form.receipt_file_name,
-      },
-      ...current,
-    ]);
+    setLoading(true);
+    setError("");
 
-    setForm(initialForm);
+    try {
+      const res = await fetch("/api/expenses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Unable to save expense");
+      }
+
+      setForm(initialForm);
+      await fetchExpenses();
+    } catch (saveError) {
+      setError(saveError.message || "Unable to save expense");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -93,6 +124,12 @@ export default function ExpensesPage() {
             </div>
           </div>
         </section>
+
+        {error && (
+          <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {error}
+          </div>
+        )}
 
         <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <form onSubmit={addExpense} className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
@@ -128,8 +165,8 @@ export default function ExpensesPage() {
               </Field>
             </div>
 
-            <button type="submit" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#8B1F1F] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#6f1818]">
-              <FaPlus /> Save expense
+            <button type="submit" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#8B1F1F] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#6f1818] disabled:cursor-not-allowed disabled:opacity-70" disabled={loading}>
+              <FaPlus /> {loading ? "Saving..." : "Save expense"}
             </button>
           </form>
 
@@ -157,6 +194,18 @@ export default function ExpensesPage() {
                   </p>
                 </div>
               ))}
+
+              {!loading && expenses.length === 0 && (
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                  No expenses recorded yet.
+                </div>
+              )}
+
+              {loading && expenses.length === 0 && (
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-center text-sm font-semibold text-slate-500">
+                  Loading expenses...
+                </div>
+              )}
             </div>
           </div>
         </section>
