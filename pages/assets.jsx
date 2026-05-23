@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { withAuthPage } from "@/lib/withAuthPage";
 
 export const getServerSideProps = withAuthPage({ path: "/assets" });
@@ -21,6 +21,18 @@ const emptyForm = {
   warranty_expiry_date: "",
   description: "",
 };
+
+const assetCategories = [
+  "Furniture",
+  "Electronics",
+  "Library Books",
+  "Vehicles",
+  "Lab Equipment",
+  "Sports",
+  "Office Equipment",
+  "Classroom Equipment",
+  "Infrastructure",
+];
 
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-IN", {
@@ -87,14 +99,9 @@ function AssetModal({ open, mode, form, setForm, onClose, onSubmit, submitting }
                   }
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900 disabled:bg-slate-50"
                 >
-                  <option>Furniture</option>
-                  <option>Electronics</option>
-                  <option>Vehicles</option>
-                  <option>Lab Equipment</option>
-                  <option>Sports</option>
-                  <option>Office Equipment</option>
-                  <option>Classroom Equipment</option>
-                  <option>Infrastructure</option>
+                  {assetCategories.map((category) => (
+                    <option key={category}>{category}</option>
+                  ))}
                 </select>
               </div>
               {input("quantity", "Quantity", "number")}
@@ -182,7 +189,7 @@ export default function AssetsPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [message, setMessage] = useState("");
 
-  async function fetchAssets() {
+  const fetchAssets = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/assets");
@@ -194,11 +201,15 @@ export default function AssetsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    fetchAssets();
-  }, []);
+    const timer = setTimeout(() => {
+      fetchAssets();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [fetchAssets]);
 
   const filteredAssets = useMemo(() => {
     return assets.filter((item) => {
@@ -216,6 +227,7 @@ export default function AssetsPage() {
   const totalAssets = assets.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalValue = assets.reduce((sum, item) => sum + Number(item.purchase_cost || 0), 0);
   const categories = [...new Set(assets.map((item) => item.asset_category).filter(Boolean))];
+  const categoryOptions = [...new Set([...assetCategories, ...categories])];
 
   function openAdd() {
     setSelectedId(null);
@@ -298,7 +310,7 @@ export default function AssetsPage() {
                 Assets
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-                Track school assets, furniture, electronics, vehicles, invoices and locations.
+                Track school assets, furniture, electronics, library books, vehicles, invoices and locations.
               </p>
             </div>
 
@@ -351,7 +363,7 @@ export default function AssetsPage() {
               className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
             >
               <option value="">All Categories</option>
-              {categories.map((item) => (
+              {categoryOptions.map((item) => (
                 <option key={item} value={item}>{item}</option>
               ))}
             </select>
@@ -449,7 +461,7 @@ export default function AssetsPage() {
               <div className="p-10 text-center">
                 <h3 className="text-lg font-semibold text-slate-900">No assets found</h3>
                 <p className="mt-2 text-sm text-slate-500">
-                  Add benches, computers, CCTV, vehicles and other school assets.
+                  Add benches, computers, CCTV, library books, vehicles and other school assets.
                 </p>
               </div>
             )}
