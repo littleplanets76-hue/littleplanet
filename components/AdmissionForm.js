@@ -10,7 +10,7 @@ const SCHOOL_ADDRESS = "Prakash Nagar, Kadapa, Andhra Pradesh";
 const SCHOOL_PHONE = "00000 00000";
 
 export default function AdmissionForm({ embedded = false }) {
-  const [form, setForm] = useState({ program: "Quantum" });
+  const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [savedAdmission, setSavedAdmission] = useState(null);
@@ -627,14 +627,6 @@ export default function AdmissionForm({ embedded = false }) {
                 <option value="Telugu">Telugu</option>
               </Select>
 
-              <Select
-                label="Program"
-                name="program"
-                onChange={handleChange}
-                value={form.program || "Quantum"}
-              >
-                <option value="Quantum">Quantum</option>
-              </Select>
             </Section>
           </div>
 
@@ -1051,15 +1043,10 @@ className="receipt-logo h-28 w-[420px] object-contain"          />
       <ReceiptRow label="Student Name" value={data?.student_name || "-"} />
       <ReceiptRow label="Father's Name" value={data?.father_name || "-"} />
 
-      <div className="grid grid-cols-2 border-b border-black">
-        <div className="receipt-p-1 border-r border-black">
+      <div className="border-b border-black">
+        <div className="receipt-p-1">
           <span className="font-black">Class / Standard</span>
           <span className="ml-2 font-bold">{data?.class_applying || "-"}</span>
-        </div>
-
-        <div className="receipt-p-1">
-          <span className="font-black">Program :</span>
-          <span className="ml-2 font-bold">{data?.program || "-"}</span>
         </div>
       </div>
 

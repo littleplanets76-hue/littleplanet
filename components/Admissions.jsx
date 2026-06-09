@@ -96,7 +96,6 @@ export default function Admissions() {
       return [
         admission.student_name,
         admission.class_applying_for,
-        admission.program,
         admission.father_name,
         admission.mother_name,
         admission.fees,
@@ -182,7 +181,6 @@ export default function Admissions() {
                   <tr className="text-left text-xs uppercase tracking-[0.2em] bg-primary text-white">
                     <th className="border-b border-slate-200 px-4 py-3">Student</th>
                     <th className="border-b border-slate-200 px-4 py-3">Class</th>
-                    <th className="border-b border-slate-200 px-4 py-3">Program</th>
                     <th className="border-b border-slate-200 px-4 py-3">Parent</th>
                     <th className="border-b border-slate-200 px-4 py-3">Status</th>
 <th className="border-b border-slate-200 px-4 py-3">Total Fees</th>
@@ -200,9 +198,6 @@ export default function Admissions() {
                       </td>
                       <td className="border-b border-slate-100 px-4 py-4 text-sm text-slate-600">
                         {admission.class_applying_for || "-"}
-                      </td>
-                      <td className="border-b border-slate-100 px-4 py-4 text-sm text-slate-600">
-                        {admission.program || "-"}
                       </td>
                       <td className="border-b border-slate-100 px-4 py-4 text-sm text-slate-600">
                         <div className="font-medium text-slate-900">{admission.father_name || admission.guardian_name || "-"}</div>
