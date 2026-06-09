@@ -5,7 +5,7 @@ import Swal from "sweetalert2";
 
 const ADMISSION_CONFIRMATION_FEE = 2000;
 
-const SCHOOL_NAME = "Quantum Heights English Medium School";
+const SCHOOL_NAME = "Little Planet";
 const SCHOOL_ADDRESS = "Prakash Nagar, Kadapa, Andhra Pradesh";
 const SCHOOL_PHONE = "00000 00000";
 
@@ -492,7 +492,7 @@ export default function AdmissionForm({ embedded = false }) {
           }
         >
           <h1 className="text-center text-2xl font-bold">
-            Quantum Heights Admission Form 2026 - 2027
+            Little Planet Admission Form 2026 - 2027
           </h1>
 
           <div className="grid gap-6 lg:grid-cols-2">
