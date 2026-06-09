@@ -22,7 +22,7 @@ const initialForm = {
   qr_code_image: "",
 };
 
-const DEFAULT_LOGO = "/logo.jpeg";
+const DEFAULT_LOGO = "/logo.jpg";
 
 export default function SchoolProfilePage() {
   const [form, setForm] = useState(initialForm);

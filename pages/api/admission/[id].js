@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { dummyAdmissions, dummyFeePayments } from "@/lib/dummyData";
 
 const pool =
   global.pgPool ||
@@ -47,16 +46,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("Admission detail API error:", err?.message || err);
-
-    // Fallback to dummy data for demo/dev
-    const admissionId = Number(req.query.id);
-    if (!admissionId) {
-      return res.status(400).json({ success: false, error: "Invalid admission id" });
-    }
-
-    const admission = dummyAdmissions.find((a) => a.id === admissionId) || null;
-    const payments = dummyFeePayments.filter((p) => p.admission_id === admissionId);
-
-    return res.status(200).json({ success: true, admission, payments });
+    return res.status(500).json({ success: false, error: err.message });
   }
 }

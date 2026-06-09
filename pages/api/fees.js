@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { dummyAdmissions, dummyFeePayments } from "@/lib/dummyData";
 
 const pool =
   global.pgPool ||
@@ -109,43 +108,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("Fees API Error:", err);
-    // Return dummy data for demo/development
-    const totalFees = dummyAdmissions.reduce((sum, a) => sum + a.fees, 0);
-    const totalCollected = dummyFeePayments.reduce((sum, p) => sum + p.paid_amount, 0);
-    
-    const dummyRecords = dummyAdmissions.map((admission) => {
-      const payments = dummyFeePayments.filter(p => p.admission_id === admission.id);
-      const paidAmount = payments.reduce((sum, p) => sum + p.paid_amount, 0);
-      return {
-        admission_id: admission.id,
-        student_name: admission.student_name,
-        class: admission.class,
-        total_fee: admission.fees,
-        paid_amount: paidAmount,
-        balance_amount: admission.fees - paidAmount,
-        payment_status: paidAmount === 0 ? 'Pending' : paidAmount < admission.fees ? 'Partial' : 'Paid',
-        latest_payment_date: payments[payments.length - 1]?.payment_date,
-        latest_receipt_no: payments[payments.length - 1]?.receipt_no,
-      };
-    });
-
-    return res.status(200).json({
-      success: true,
-      isDemo: true,
-      records: dummyRecords,
-      metrics: {
-        totalFees,
-        totalCollected,
-        pendingFees: totalFees - totalCollected,
-        todayCollection: 75000,
-      },
-      monthly: [
-        { month_label: "Jan 2024", month_key: "2024-01", collected: 320000 },
-        { month_label: "Feb 2024", month_key: "2024-02", collected: 380000 },
-        { month_label: "Mar 2024", month_key: "2024-03", collected: 420000 },
-        { month_label: "Apr 2024", month_key: "2024-04", collected: 450000 },
-        { month_label: "May 2024", month_key: "2024-05", collected: 475000 },
-      ],
-    });
+    return res.status(500).json({ success: false, error: err.message });
   }
 }

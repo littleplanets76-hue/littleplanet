@@ -5,9 +5,10 @@ export const getServerSideProps = withAuthPage({ path: "/payroll" });
 
 const emptyForm = {
   staff_id: "",
-payroll_month: new Date().toLocaleString("en-US", {
-  month: "short",
-}).toUpperCase(),  payroll_year: new Date().getFullYear(),
+  payroll_month: new Date().toLocaleString("en-US", {
+    month: "short",
+  }).toUpperCase(),
+  payroll_year: new Date().getFullYear(),
   working_days: 26,
   leave_days: 0,
   lop_days: 0,
@@ -15,7 +16,7 @@ payroll_month: new Date().toLocaleString("en-US", {
   basic_salary: 0,
   increment_amount: 0,
   bonus_amount: 0,
-  deduction_amount: 2500,
+  deduction_amount: 0,
   payment_status: "PENDING",
   payment_date: "",
   payment_mode: "Bank Transfer",
@@ -241,7 +242,6 @@ function PayrollModal({ open, form, setForm, staff, onClose, onSubmit, submittin
 export default function PayrollPage() {
   const [payroll, setPayroll] = useState([]);
   const [staff, setStaff] = useState([]);
-  const [metrics, setMetrics] = useState({});
   const [form, setForm] = useState(emptyForm);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
@@ -256,7 +256,6 @@ export default function PayrollPage() {
     if (data.success) {
       setPayroll(data.payroll || []);
       setStaff(data.staff || []);
-      setMetrics(data.metrics || {});
     }
   }
 
@@ -343,6 +342,39 @@ export default function PayrollPage() {
     if (data.success) fetchData();
   }
 
+  const filteredPayroll = useMemo(() => {
+    const [month, year] = filterMonthYear.split(" ");
+
+    return payroll.filter((row) => (
+      String(row.payroll_month || "").toUpperCase() === month &&
+      String(row.payroll_year || "") === year
+    ));
+  }, [payroll, filterMonthYear]);
+
+  const visibleMetrics = useMemo(() => filteredPayroll.reduce(
+    (totals, row) => {
+      const netSalary = Number(row.net_salary || 0);
+      const deductionAmount = Number(row.deduction_amount || 0);
+
+      totals.totalPayroll += netSalary;
+      totals.totalDeductions += deductionAmount;
+
+      if (row.payment_status === "PAID") {
+        totals.paidPayroll += netSalary;
+      } else {
+        totals.pendingPayroll += netSalary;
+      }
+
+      return totals;
+    },
+    {
+      totalPayroll: 0,
+      paidPayroll: 0,
+      pendingPayroll: 0,
+      totalDeductions: 0,
+    }
+  ), [filteredPayroll]);
+
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-6">
       <div className="mx-auto max-w-7xl">
@@ -353,19 +385,19 @@ export default function PayrollPage() {
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="rounded-3xl bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Total Payout</p>
-            <h2 className="mt-3 text-3xl font-black">₹30,500</h2>
+            <h2 className="mt-3 text-3xl font-black">{money(visibleMetrics.totalPayroll)}</h2>
           </div>
           <div className="rounded-3xl bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Paid</p>
-            <h2 className="mt-3 text-3xl font-black text-green-700">{money(metrics.paidPayroll)}</h2>
+            <h2 className="mt-3 text-3xl font-black text-green-700">{money(visibleMetrics.paidPayroll)}</h2>
           </div>
           <div className="rounded-3xl bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Pending</p>
-            <h2 className="mt-3 text-3xl font-black text-red-700">{money(metrics.pendingPayroll)}</h2>
+            <h2 className="mt-3 text-3xl font-black text-red-700">{money(visibleMetrics.pendingPayroll)}</h2>
           </div>
           <div className="rounded-3xl bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Deductions</p>
-            <h2 className="mt-3 text-3xl font-black text-orange-600">₹2,500</h2>
+            <h2 className="mt-3 text-3xl font-black text-orange-600">{money(visibleMetrics.totalDeductions)}</h2>
           </div>
         </div>
 
@@ -407,14 +439,15 @@ export default function PayrollPage() {
               </thead>
 
               <tbody className="divide-y divide-slate-100">
-                {payroll.map((row) => (
+                {filteredPayroll.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50">
                     <td className="px-5 py-4">
                       <p className="font-bold text-slate-900">{row.full_name}</p>
                       <p className="text-sm text-slate-500">{row.designation || row.staff_type}</p>
                     </td>
                     <td className="px-5 py-4 text-sm">
-{row.payroll_month} {row.payroll_year}                    </td>
+                      {row.payroll_month} {row.payroll_year}
+                    </td>
                     <td className="px-5 py-4 text-sm">{money(row.basic_salary)}</td>
                     <td className="px-5 py-4 text-sm">
                       Leave: {row.leave_days || 0}, LOP: {row.lop_days || 0}
@@ -445,7 +478,7 @@ export default function PayrollPage() {
               </tbody>
             </table>
 
-            {payroll.length === 0 && (
+            {filteredPayroll.length === 0 && (
               <div className="p-10 text-center text-sm text-slate-500">
                 No payroll records found.
               </div>

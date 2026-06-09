@@ -10,7 +10,7 @@ const SCHOOL_ADDRESS = "Prakash Nagar, Kadapa, Andhra Pradesh";
 const SCHOOL_PHONE = "00000 00000";
 
 export default function AdmissionForm({ embedded = false }) {
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState({ program: "Quantum" });
   const [loading, setLoading] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [savedAdmission, setSavedAdmission] = useState(null);
@@ -440,6 +440,12 @@ export default function AdmissionForm({ embedded = false }) {
         setTimeout(() => {
           Swal.close();
           printReceiptOnly();
+
+          if (embedded) {
+            setTimeout(() => {
+              window.location.reload();
+            }, 1200);
+          }
         }, 900);
       } else {
         Swal.fire({
@@ -625,12 +631,9 @@ export default function AdmissionForm({ embedded = false }) {
                 label="Program"
                 name="program"
                 onChange={handleChange}
-                value={form.program || ""}
+                value={form.program || "Quantum"}
               >
-                <option value="">Select</option>
                 <option value="Quantum">Quantum</option>
-                <option value="Quantum Pro">Quantum Pro</option>
-                <option value="Quantum Elite">Quantum Elite</option>
               </Select>
             </Section>
           </div>
@@ -1015,7 +1018,7 @@ function ReceiptCopy({
 
           <div>
            <img
-            src="/logo.jpeg"
+            src="/logo.jpg"
             alt="School Logo"
 className="receipt-logo h-28 w-[420px] object-contain"          />
           </div>

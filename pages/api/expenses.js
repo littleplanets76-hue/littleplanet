@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { dummyExpenses } from "@/lib/dummyData";
 
 const pool =
   global.pgPool ||
@@ -113,15 +112,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("Expenses API Error:", err);
-
-    // Return dummy data for demo/development when database is unavailable
-    if (req.method === "GET") {
-      return res.status(200).json({
-        success: true,
-        isDemo: true,
-        expenses: dummyExpenses,
-      });
-    }
 
     return res.status(500).json({
       success: false,

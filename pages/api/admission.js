@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { dummyAdmissions } from "@/lib/dummyData";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -117,6 +116,26 @@ export default async function handler(req, res) {
       await client.query("BEGIN");
       await ensureFeePaymentsTable(client);
 
+      const parentResult = await client.query(
+        `
+          INSERT INTO public.parents (
+            father_name,
+            father_mobile,
+            mother_name,
+            mother_mobile
+          ) VALUES ($1, $2, $3, $4)
+          RETURNING id;
+        `,
+        [
+          cleanValue(body.father_name),
+          cleanValue(body.father_mobile),
+          cleanValue(body.mother_name),
+          cleanValue(body.mother_mobile),
+        ]
+      );
+
+      const parent = parentResult.rows[0];
+
       const admissionResult = await client.query(
         `
           INSERT INTO public.admissions (
@@ -163,7 +182,8 @@ export default async function handler(req, res) {
             city,
             village,
             pin_code,
-            emergency_contact
+            emergency_contact,
+            parent_id
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8,
 
@@ -179,7 +199,7 @@ export default async function handler(req, res) {
 
             $26, $27, $28, $29, $30,
 
-            $31, $32, $33, $34, $35, $36, $37
+            $31, $32, $33, $34, $35, $36, $37, $38
           )
           RETURNING *;
         `,
@@ -228,6 +248,7 @@ export default async function handler(req, res) {
           cleanValue(body.village),
           cleanValue(body.pin_code),
           cleanValue(body.emergency),
+          parent.id,
         ]
       );
 
@@ -302,6 +323,7 @@ export default async function handler(req, res) {
         success: true,
         data: {
           ...admission,
+          parent_id: parent.id,
           fee_payment: feePaymentResult.rows[0],
         },
       });
@@ -313,23 +335,6 @@ export default async function handler(req, res) {
     }
   } catch (err) {
     console.error("Admission API Error:", err);
-
-    // Return dummy data for demo/development when database is unavailable
-    if (req.method === "GET") {
-      return res.status(200).json({
-        success: true,
-        isDemo: true,
-        admissions: dummyAdmissions.map(a => ({
-          id: a.id,
-          student_name: a.student_name,
-          class_applying_for: a.class,
-          father_name: a.father_name,
-          fees: a.fees,
-          admission_status: a.status,
-          created_at: a.admission_date,
-        })),
-      });
-    }
 
     return res.status(500).json({
       success: false,

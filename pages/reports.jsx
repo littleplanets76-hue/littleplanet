@@ -1,22 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { withAuthPage } from "@/lib/withAuthPage";
 import {
   formatCurrency,
   formatCount,
   safePercent,
-  generateWhatsAppMessage,
-  mockClassWiseFeeCollection,
-  mockPendingFeeStudents,
-  mockAdmissionSummary,
-  mockNewAdmissionsThisMonth,
-  mockExpenseBreakdown,
-  mockExpenseTable,
-  mockMonthlyIncomeExpense,
-  mockStaffPayroll,
-  mockClassWiseStudentStrength,
-  mockDailyCashbook,
-  generateCashbookSummary,
-  calculateActionAlerts,
 } from "@/lib/reportDataUtils";
 
 export const getServerSideProps = withAuthPage({ path: "/reports" });
@@ -208,7 +195,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function fetchReports() {
+  const fetchReports = useCallback(async function fetchReports() {
     try {
       setLoading(true);
       setError("");
@@ -227,11 +214,15 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [month]);
 
   useEffect(() => {
-    fetchReports();
-  }, [month]);
+    const timeoutId = window.setTimeout(() => {
+      fetchReports();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchReports]);
 
   const collectionPercent = data.totalFees
     ? (Number(data.totalCollected || 0) / Number(data.totalFees || 1)) * 100
@@ -259,6 +250,29 @@ export default function ReportsPage() {
     () => Math.max(...(data.classWiseFees || []).map((x) => Number(x.collected || 0)), 1),
     [data.classWiseFees]
   );
+
+  const todayCashbook = {
+    date: new Date().toISOString().slice(0, 10),
+    dayName: "Today",
+    openingBalance: 0,
+    feeCollection: Number(data.todayCollection || 0),
+    otherIncome: 0,
+    expenses: Number(data.todayExpenses || 0),
+    salaryPaid: 0,
+    bankDeposit: 0,
+    bankWithdrawal: 0,
+    closingBalance: Number(data.netBalance || 0),
+  };
+
+  const monthlyCashbook = (data.monthlyCollections || []).map((item) => ({
+    month: item.month || item.month_label || item.month_key || "-",
+    feeCollection: Number(item.amount || item.collected || 0),
+    otherIncome: 0,
+    expenses: 0,
+    salary: 0,
+    netBalance: Number(item.amount || item.collected || 0),
+    bankBalance: Number(item.amount || item.collected || 0),
+  }));
 
   const tabs = [
     { key: "fees", label: "Fee Reports" },
@@ -578,26 +592,26 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Opening Balance</p>
-                <h3 className="mt-2 text-2xl font-black text-blue-600">{formatCurrency(mockDailyCashbook[0]?.openingBalance || 0)}</h3>
+                <h3 className="mt-2 text-2xl font-black text-blue-600">{formatCurrency(todayCashbook.openingBalance)}</h3>
                 <p className="mt-1 text-xs text-slate-600">Starting cash in hand</p>
               </div>
 
               <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Today Collections</p>
-                <h3 className="mt-2 text-2xl font-black text-green-600">{formatCurrency((mockDailyCashbook[0]?.feeCollection || 0) + (mockDailyCashbook[0]?.otherIncome || 0))}</h3>
+                <h3 className="mt-2 text-2xl font-black text-green-600">{formatCurrency(todayCashbook.feeCollection + todayCashbook.otherIncome)}</h3>
                 <p className="mt-1 text-xs text-slate-600">Fee + Other Income</p>
               </div>
 
               <div className="rounded-2xl border-2 border-red-200 bg-red-50 p-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Today Expenses</p>
-                <h3 className="mt-2 text-2xl font-black text-red-600">{formatCurrency((mockDailyCashbook[0]?.expenses || 0) + (mockDailyCashbook[0]?.salaryPaid || 0))}</h3>
+                <h3 className="mt-2 text-2xl font-black text-red-600">{formatCurrency(todayCashbook.expenses + todayCashbook.salaryPaid)}</h3>
                 <p className="mt-1 text-xs text-slate-600">Cash outflow</p>
               </div>
 
-              <div className={`rounded-2xl border-2 p-4 ${mockDailyCashbook[0]?.closingBalance >= 100000 ? "border-emerald-200 bg-emerald-50" : mockDailyCashbook[0]?.closingBalance >= 50000 ? "border-yellow-200 bg-yellow-50" : "border-red-200 bg-red-50"}`}>
+              <div className={`rounded-2xl border-2 p-4 ${todayCashbook.closingBalance >= 100000 ? "border-emerald-200 bg-emerald-50" : todayCashbook.closingBalance >= 50000 ? "border-yellow-200 bg-yellow-50" : "border-red-200 bg-red-50"}`}>
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Closing Balance (Today)</p>
-                <h3 className={`mt-2 text-2xl font-black ${mockDailyCashbook[0]?.closingBalance >= 100000 ? "text-emerald-600" : mockDailyCashbook[0]?.closingBalance >= 50000 ? "text-yellow-600" : "text-red-600"}`}>
-                  {formatCurrency(mockDailyCashbook[0]?.closingBalance || 0)}
+                <h3 className={`mt-2 text-2xl font-black ${todayCashbook.closingBalance >= 100000 ? "text-emerald-600" : todayCashbook.closingBalance >= 50000 ? "text-yellow-600" : "text-red-600"}`}>
+                  {formatCurrency(todayCashbook.closingBalance)}
                 </h3>
                 <p className="mt-1 text-xs text-slate-600">Cash in hand end of day</p>
               </div>
@@ -628,7 +642,7 @@ export default function ReportsPage() {
                   </thead>
 
                   <tbody className="divide-y divide-slate-100">
-                    {(mockDailyCashbook || []).map((item, idx) => (
+                    {[todayCashbook].map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 transition">
                         <td className="px-4 py-4 font-semibold text-slate-900">{item.dayName} ({item.date})</td>
                         <td className="px-4 py-4 text-sm font-semibold text-blue-600">{formatCurrency(item.openingBalance)}</td>
@@ -663,15 +677,15 @@ export default function ReportsPage() {
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                     <span className="text-slate-600 font-semibold">Account Balance</span>
-                    <span className="text-2xl font-black text-indigo-600">{formatCurrency(285000)}</span>
+                    <span className="text-2xl font-black text-indigo-600">{formatCurrency(0)}</span>
                   </div>
                   <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                     <span className="text-slate-600 font-semibold">Cash in Hand</span>
-                    <span className="text-2xl font-black text-emerald-600">{formatCurrency(mockDailyCashbook[0]?.closingBalance || 0)}</span>
+                    <span className="text-2xl font-black text-emerald-600">{formatCurrency(todayCashbook.closingBalance)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600 font-semibold">Total Liquid Assets</span>
-                    <span className="text-2xl font-black text-blue-600">{formatCurrency(285000 + (mockDailyCashbook[0]?.closingBalance || 0))}</span>
+                    <span className="text-2xl font-black text-blue-600">{formatCurrency(todayCashbook.closingBalance)}</span>
                   </div>
                 </div>
               </div>
@@ -682,27 +696,27 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-3 mb-1">
                     <div className="p-2 bg-linear-to-br from-cyan-400 to-teal-500 rounded-xl">
                       <svg xmlns='http://www.w3.org/2000/svg' className='text-white w-5 h-5' fill='currentColor' viewBox='0 0 24 24'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54h2.75v2.71h2.92v-2.71h2.75L13.96 9.29z'/></svg>
-                    </div>
-                    <h3 className="text-xl font-black text-slate-900">This Month (May)</h3>
+                  </div>
+                    <h3 className="text-xl font-black text-slate-900">This Month</h3>
                   </div>
                 </div>
 
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                     <span className="text-slate-600 font-semibold">Fee Collection</span>
-                    <span className="font-black text-emerald-600">{formatCurrency(430000)}</span>
+                    <span className="font-black text-emerald-600">{formatCurrency(data.totalCollected)}</span>
                   </div>
                   <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                     <span className="text-slate-600 font-semibold">Expenses</span>
-                    <span className="font-black text-red-600">-{formatCurrency(170000)}</span>
+                    <span className="font-black text-red-600">-{formatCurrency(data.expenses)}</span>
                   </div>
                   <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                     <span className="text-slate-600 font-semibold">Salary Paid</span>
-                    <span className="font-black text-red-600">-{formatCurrency(500000)}</span>
+                    <span className="font-black text-red-600">-{formatCurrency(data.salaries)}</span>
                   </div>
                   <div className="flex items-center justify-between pt-2">
                     <span className="text-slate-700 font-bold">Net Balance</span>
-                    <span className="text-2xl font-black text-red-600">-{formatCurrency(240000)}</span>
+                    <span className={`text-2xl font-black ${Number(data.netSurplus || 0) < 0 ? "text-red-600" : "text-emerald-600"}`}>{formatCurrency(data.netSurplus)}</span>
                   </div>
                 </div>
               </div>
@@ -733,7 +747,7 @@ export default function ReportsPage() {
                   </thead>
 
                   <tbody className="divide-y divide-slate-100">
-                    {(mockMonthlyIncomeExpense || []).map((item, idx) => (
+                    {monthlyCashbook.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 transition">
                         <td className="px-5 py-4 font-semibold text-slate-900">{item.month}</td>
                         <td className="px-5 py-4 text-sm font-semibold text-emerald-600">+{formatCurrency(item.feeCollection)}</td>
@@ -748,6 +762,9 @@ export default function ReportsPage() {
                     ))}
                   </tbody>
                 </table>
+                {monthlyCashbook.length === 0 && (
+                  <div className="p-8 text-center text-sm text-slate-500">No monthly cashbook data found.</div>
+                )}
               </div>
             </div>
           </div>

@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { getDummyReportsData } from "@/lib/dummyData";
 
 const pool =
   global.pgPool ||
@@ -241,12 +240,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("Reports API Error:", err);
-    // Return dummy data for demo/development when database is unavailable
-    const dummyData = getDummyReportsData();
-    return res.status(200).json({
-      success: true,
-      isDemo: true,
-      data: dummyData,
-    });
+    return res.status(500).json({ success: false, error: err.message });
   }
 }
