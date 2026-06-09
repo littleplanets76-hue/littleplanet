@@ -167,7 +167,7 @@ export default function DashboardPage({
   expenses,
   salaries,
   totalAssets,
-  alerts = 21,}) {
+  alerts = 0,}) {
   const role = getRoleLabel(user?.role);
   const isAccountant = role === "ACCOUNTANT";
   const statusSummary = admissionStatusCounts.filter((item) => Number(item.value || 0) > 0);

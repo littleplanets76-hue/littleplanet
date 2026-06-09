@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaFileExcel, FaPlus, FaReceipt, FaTrash } from "react-icons/fa";
+import { FaFileExcel, FaPlus, FaReceipt, FaSyncAlt, FaTrash } from "react-icons/fa";
 import { withAuthPage } from "@/lib/withAuthPage";
 import { downloadExcel } from "@/lib/exportToExcel";
 
@@ -156,8 +156,25 @@ function normalizePhoneNumber(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
+function formatClassName(value) {
+  const className = String(value || "").trim();
+  const numericClass = className.match(/^(?:class\s*)?(\d+)$/i)?.[1];
+
+  if (!numericClass) {
+    return className;
+  }
+
+  const number = Number(numericClass);
+
+  if (number === 1) return "1st";
+  if (number === 2) return "2nd";
+  if (number === 3) return "3rd";
+
+  return `${number}th`;
+}
+
 function getClassName(item) {
-  return String(item?.class || item?.class_name || "").trim();
+  return formatClassName(item?.class || item?.class_name || "");
 }
 
 function getPaymentMode(item) {
@@ -191,17 +208,24 @@ function formatMonthLabel(monthKey) {
   }).format(date);
 }
 
+const SCHOOL_YEAR_START_MONTH = 5;
+
+function getSchoolYearStartDate(referenceDate = new Date()) {
+  const year = referenceDate.getFullYear();
+  const startYear =
+    referenceDate.getMonth() >= SCHOOL_YEAR_START_MONTH ? year : year - 1;
+
+  return new Date(startYear, SCHOOL_YEAR_START_MONTH, 1);
+}
+
 function buildMonthlySeries(monthlyRows, monthsToShow = 12) {
   const sorted = [...monthlyRows]
     .filter((item) => String(item.month_key || "").match(/^\d{4}-\d{2}$/))
     .sort((a, b) => String(a.month_key).localeCompare(String(b.month_key)));
 
-  const endDate = new Date();
-  endDate.setDate(1);
-  endDate.setHours(0, 0, 0, 0);
-
-  const startDate = new Date(endDate);
-  startDate.setMonth(startDate.getMonth() - (monthsToShow - 1));
+  const startDate = getSchoolYearStartDate();
+  const endDate = new Date(startDate);
+  endDate.setMonth(startDate.getMonth() + (monthsToShow - 1));
 
   const byMonth = new Map(
     sorted.map((item) => [
@@ -278,6 +302,12 @@ export default function FeesPage() {
   const [phonePePayment, setPhonePePayment] = useState(null);
   const [copyLinkLabel, setCopyLinkLabel] = useState("Copy Link");
   const [admissionSearch, setAdmissionSearch] = useState("");
+  const [whatsappStatus, setWhatsappStatus] = useState({
+    loading: true,
+    connected: false,
+    error: "",
+    qrUrl: "",
+  });
 
   const [ledgerSearch, setLedgerSearch] = useState("");
   const [ledgerClass, setLedgerClass] = useState("All");
@@ -364,6 +394,33 @@ export default function FeesPage() {
     );
   }, [admissionOptions, admissionSearch]);
 
+  async function loadWhatsappStatus() {
+    setWhatsappStatus((current) => ({ ...current, loading: true }));
+
+    try {
+      const response = await fetch("/api/whatsapp/status");
+      const data = await response.json();
+
+      setWhatsappStatus({
+        loading: false,
+        connected: Boolean(data.connected),
+        connecting: Boolean(data.connecting),
+        error: data.success ? "" : data.error || "WhatsApp status failed",
+        qrUrl: data.qrUrl || "",
+        state: data.state || "",
+        user: data.user || null,
+        limits: data.limits || {},
+      });
+    } catch (error) {
+      setWhatsappStatus((current) => ({
+        ...current,
+        loading: false,
+        connected: false,
+        error: error.message || "WhatsApp status failed",
+      }));
+    }
+  }
+
   useEffect(() => {
     let isMounted = true;
 
@@ -415,6 +472,15 @@ export default function FeesPage() {
       isMounted = false;
     };
   }, [month, autoNotify, feesVersion]);
+
+  useEffect(() => {
+    void loadWhatsappStatus();
+    const intervalId = window.setInterval(loadWhatsappStatus, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const filteredLedgerRows = useMemo(() => {
     const search = ledgerSearch.trim().toLowerCase();
@@ -1239,6 +1305,67 @@ export default function FeesPage() {
           </div>
         </div>
 
+        <section className="mb-6 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
+                WhatsApp
+              </p>
+              <h2 className="mt-2 text-xl font-black text-slate-900">
+                Receipt sender is{" "}
+                <span
+                  className={
+                    whatsappStatus.connected
+                      ? "text-emerald-700"
+                      : "text-amber-700"
+                  }
+                >
+                  {whatsappStatus.loading
+                    ? "checking"
+                    : whatsappStatus.connected
+                    ? "connected"
+                    : "not connected"}
+                </span>
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {whatsappStatus.connected
+                  ? `Logged in as ${
+                      whatsappStatus.user?.name ||
+                      whatsappStatus.user?.id ||
+                      "WhatsApp"
+                    }. Remaining today: ${
+                      whatsappStatus.limits?.remainingToday ?? "-"
+                    }.`
+                  : whatsappStatus.error ||
+                    "Open the QR page and scan it from WhatsApp Linked Devices."}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={loadWhatsappStatus}
+                disabled={whatsappStatus.loading}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <FaSyncAlt />
+                Refresh
+              </button>
+
+              {whatsappStatus.qrUrl && (
+                <a
+                  href={whatsappStatus.qrUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center rounded-2xl bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-500"
+                >
+                  {whatsappStatus.connected ? "Open WhatsApp status" : "Connect WhatsApp"}
+                </a>
+              )}
+            </div>
+          </div>
+        </section>
+
         <section className="mb-6 rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
@@ -1776,13 +1903,6 @@ export default function FeesPage() {
 
                       <td className="px-5 py-4 align-top">
                         <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => selectLedgerRowForCollection(item)}
-                            className="inline-flex items-center rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
-                          >
-                            Collect
-                          </button>
                           <button
                             type="button"
                             onClick={() => openWhatsApp(item)}

@@ -48,7 +48,9 @@ export default function Admissions() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [selectedAdmissionId, setSelectedAdmissionId] = useState(null);
+  const [editingAdmission, setEditingAdmission] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [savingId, setSavingId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -155,9 +157,46 @@ export default function Admissions() {
     }
   }
 
+  async function saveAdmission(form) {
+    setSavingId(form.id);
+    setError("");
+
+    try {
+      const response = await fetch(`/api/admission?id=${form.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Unable to update admission");
+      }
+
+      setAdmissions((currentAdmissions) =>
+        currentAdmissions.map((item) =>
+          item.id === data.admission.id ? data.admission : item
+        )
+      );
+      setEditingAdmission(null);
+    } catch (saveError) {
+      setError(saveError.message || "Unable to update admission");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   return (
     <div >
       <AdmissionModal admissionId={selectedAdmissionId} onClose={() => setSelectedAdmissionId(null)} />
+      {editingAdmission && (
+        <AdmissionEditModal
+          admission={editingAdmission}
+          saving={savingId === editingAdmission.id}
+          onClose={() => setEditingAdmission(null)}
+          onSave={saveAdmission}
+        />
+      )}
       <div className="rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-6 md:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -255,14 +294,26 @@ export default function Admissions() {
   {formatCurrency(admission.final_fee)}
 </td>
 <td className="border-b border-slate-100 px-4 py-4">
-  <button
-    type="button"
-    onClick={(event) => deleteAdmission(event, admission)}
-    disabled={deletingId === admission.id}
-    className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-  >
-    {deletingId === admission.id ? "Deleting..." : "Delete"}
-  </button>
+  <div className="flex flex-wrap gap-2">
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        setEditingAdmission(admission);
+      }}
+      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+    >
+      Edit
+    </button>
+    <button
+      type="button"
+      onClick={(event) => deleteAdmission(event, admission)}
+      disabled={deletingId === admission.id}
+      className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {deletingId === admission.id ? "Deleting..." : "Delete"}
+    </button>
+  </div>
 </td>
                     </tr>
                   ))}
@@ -272,6 +323,142 @@ export default function Admissions() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function toDateInput(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function AdmissionEditModal({ admission, saving, onClose, onSave }) {
+  const [form, setForm] = useState({
+    id: admission.id,
+    student_name: admission.student_name || "",
+    gender: admission.gender || "",
+    date_of_birth: toDateInput(admission.date_of_birth),
+    age: admission.age || "",
+    blood_group: admission.blood_group || "",
+    nationality: admission.nationality || "",
+    religion: admission.religion || "",
+    class_applying_for: admission.class_applying_for || "",
+    medium: admission.medium || "",
+    father_name: admission.father_name || "",
+    father_mobile: admission.father_mobile || "",
+    mother_name: admission.mother_name || "",
+    mother_mobile: admission.mother_mobile || "",
+    guardian_name: admission.guardian_name || "",
+    emergency_contact: admission.emergency_contact || "",
+    admission_status: admission.admission_status || "NEW",
+    admission_fee_mode: admission.admission_fee_mode || "",
+    fees: admission.fees || "",
+    discount: admission.discount || "",
+  });
+
+  const fees = Number(form.fees || 0);
+  const discount = Number(form.discount || 0);
+  const finalFee = Math.max(fees - Math.round((fees * discount) / 100), 0);
+
+  function updateField(event) {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave(form);
+        }}
+        className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-black text-slate-900">Edit admission</h2>
+            <p className="mt-1 text-sm text-slate-500">Admission #{admission.id}</p>
+          </div>
+          <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-right">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Final fee</p>
+            <p className="mt-1 text-lg font-black text-emerald-800">{formatCurrency(finalFee)}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          {[
+            ["student_name", "Student name", "text"],
+            ["gender", "Gender", "text"],
+            ["date_of_birth", "Date of birth", "date"],
+            ["age", "Age", "number"],
+            ["class_applying_for", "Class", "text"],
+            ["blood_group", "Blood group", "text"],
+            ["nationality", "Nationality", "text"],
+            ["religion", "Religion", "text"],
+            ["medium", "Medium", "text"],
+            ["father_name", "Father name", "text"],
+            ["father_mobile", "Father mobile", "text"],
+            ["mother_name", "Mother name", "text"],
+            ["mother_mobile", "Mother mobile", "text"],
+            ["guardian_name", "Guardian name", "text"],
+            ["emergency_contact", "Emergency contact", "text"],
+            ["fees", "Total fees", "number"],
+            ["discount", "Discount %", "number"],
+          ].map(([name, label, type]) => (
+            <label key={name} className="text-sm font-semibold text-slate-700">
+              {label}
+              <input
+                name={name}
+                type={type}
+                value={form[name]}
+                onChange={updateField}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+              />
+            </label>
+          ))}
+
+          <label className="text-sm font-semibold text-slate-700">
+            Status
+            <select
+              name="admission_status"
+              value={form.admission_status}
+              onChange={updateField}
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            >
+              <option value="NEW">NEW</option>
+              <option value="PENDING">PENDING</option>
+              <option value="APPROVED">APPROVED</option>
+              <option value="ADMITTED">ADMITTED</option>
+              <option value="REJECTED">REJECTED</option>
+            </select>
+          </label>
+
+          <label className="text-sm font-semibold text-slate-700">
+            Admission fee mode
+            <select
+              name="admission_fee_mode"
+              value={form.admission_fee_mode}
+              onChange={updateField}
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            >
+              <option value="">Select mode</option>
+              <option value="Cash">Cash</option>
+              <option value="PhonePe">PhonePe</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={onClose} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">
+            Cancel
+          </button>
+          <button disabled={saving} className="rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white disabled:opacity-60">
+            {saving ? "Saving..." : "Save changes"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

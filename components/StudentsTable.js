@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function StudentsTable({ students }) {
+export default function StudentsTable({ students, onEdit }) {
   return (
     <div className="overflow-x-auto w-full">
       <table className="min-w-full bg-white border border-gray-200 rounded-lg text-xs md:text-sm">
@@ -18,6 +18,7 @@ export default function StudentsTable({ students }) {
             <th className="py-2 px-4 text-center">Medium</th>
             <th className="py-2 px-4 text-center">Admission ID</th>
             <th className="py-2 px-4 text-center">Created At</th>
+            <th className="py-2 px-4 text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -36,11 +37,20 @@ export default function StudentsTable({ students }) {
                 <td className="py-2 px-4 text-center">{student.medium || '-'}</td>
                 <td className="py-2 px-4 text-center">{student.admission_id || '-'}</td>
                 <td className="py-2 px-4 text-center">{formatDateTime(student.created_at)}</td>
+                <td className="py-2 px-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => onEdit?.(student)}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Edit
+                  </button>
+                </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="13" className="text-center py-4">No student records found.</td>
+              <td colSpan="14" className="text-center py-4">No student records found.</td>
             </tr>
           )}
         </tbody>

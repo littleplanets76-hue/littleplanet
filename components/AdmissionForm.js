@@ -9,6 +9,23 @@ const SCHOOL_NAME = "Little Planet";
 const SCHOOL_ADDRESS = "Prakash Nagar, Kadapa, Andhra Pradesh";
 const SCHOOL_PHONE = "00000 00000";
 
+function formatClassName(value) {
+  const className = String(value || "").trim();
+  const numericClass = className.match(/^(?:class\s*)?(\d+)$/i)?.[1];
+
+  if (!numericClass) {
+    return className;
+  }
+
+  const number = Number(numericClass);
+
+  if (number === 1) return "1st";
+  if (number === 2) return "2nd";
+  if (number === 3) return "3rd";
+
+  return `${number}th`;
+}
+
 export default function AdmissionForm({ embedded = false }) {
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
@@ -404,6 +421,8 @@ export default function AdmissionForm({ embedded = false }) {
 
     const payload = {
       ...form,
+      class_applying: formatClassName(form.class_applying),
+      previous_class: formatClassName(form.previous_class),
       fees: feesAmount,
       discount: discountPercent,
       final_fee: finalFeeAmount,

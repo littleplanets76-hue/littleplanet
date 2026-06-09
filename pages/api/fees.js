@@ -1,14 +1,14 @@
 import { Pool } from "pg";
+import { createPoolOptions } from "@/lib/postgresConfig";
 
 const pool =
   global.pgPool ||
-  new Pool({
-    connectionString: process.env.DATABASE_URL,
+  new Pool(createPoolOptions({
     ssl:
       process.env.NODE_ENV === "production"
         ? { rejectUnauthorized: false }
         : false,
-  });
+  }));
 
 if (!global.pgPool) global.pgPool = pool;
 
@@ -130,9 +130,26 @@ export default async function handler(req, res) {
         TO_CHAR(payment_date, 'YYYY-MM') AS month_key,
         COALESCE(SUM(amount_paid), 0)::numeric AS collected
       FROM public.fee_payments
+      WHERE payment_date >= MAKE_DATE(
+        CASE
+          WHEN EXTRACT(MONTH FROM CURRENT_DATE) >= 6
+            THEN EXTRACT(YEAR FROM CURRENT_DATE)::int
+          ELSE EXTRACT(YEAR FROM CURRENT_DATE)::int - 1
+        END,
+        6,
+        1
+      )
+      AND payment_date < MAKE_DATE(
+        CASE
+          WHEN EXTRACT(MONTH FROM CURRENT_DATE) >= 6
+            THEN EXTRACT(YEAR FROM CURRENT_DATE)::int + 1
+          ELSE EXTRACT(YEAR FROM CURRENT_DATE)::int
+        END,
+        6,
+        1
+      )
       GROUP BY month_label, month_key
       ORDER BY month_key ASC
-      LIMIT 12
     `);
 
     return res.status(200).json({

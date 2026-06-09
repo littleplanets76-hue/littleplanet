@@ -1,34 +1,9 @@
-import { FaBell, FaExclamationTriangle, FaCalendarAlt, FaCheckCircle } from "react-icons/fa";
+import { FaBell } from "react-icons/fa";
 import { withAuthPage } from "@/lib/withAuthPage";
 
 export const getServerSideProps = withAuthPage({ path: "/alerts" });
 
-const alerts = [
-  {
-    id: 1,
-    title: "Fee follow-up pending",
-    description: "Several fee records still need follow-up today.",
-    time: "10 mins ago",
-    tone: "bg-amber-50 text-amber-700 border-amber-200",
-    icon: FaExclamationTriangle,
-  },
-  {
-    id: 2,
-    title: "Admissions review due",
-    description: "New applications are waiting for verification.",
-    time: "1 hour ago",
-    tone: "bg-sky-50 text-sky-700 border-sky-200",
-    icon: FaCalendarAlt,
-  },
-  {
-    id: 3,
-    title: "Payroll prepared",
-    description: "This month’s salary sheet is ready for review.",
-    time: "Today",
-    tone: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    icon: FaCheckCircle,
-  },
-];
+const alerts = [];
 
 export default function AlertsPage() {
   return (

@@ -1,8 +1,7 @@
 import { Pool } from "pg";
+import { createPoolOptions } from "@/lib/postgresConfig";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+const pool = new Pool(createPoolOptions());
 
 async function ensureFeePaymentsTable(client) {
   await client.query(`
@@ -153,6 +152,149 @@ export default async function handler(req, res) {
       } catch (deleteError) {
         await client.query("ROLLBACK");
         throw deleteError;
+      } finally {
+        client.release();
+      }
+    }
+
+    if (req.method === "PUT") {
+      const admissionId = Number(req.query.id || req.body?.id);
+
+      if (!Number.isInteger(admissionId) || admissionId <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Valid admission id is required",
+        });
+      }
+
+      const body = req.body || {};
+      const fees = cleanNumber(body.fees);
+      const discount = cleanNumber(body.discount);
+      const discountAmount = Math.round((fees * discount) / 100);
+      const finalFee = Math.max(fees - discountAmount, 0);
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+
+        const result = await client.query(
+          `
+            UPDATE public.admissions
+            SET student_name = $1,
+                gender = $2,
+                date_of_birth = $3,
+                age = $4,
+                blood_group = $5,
+                nationality = $6,
+                religion = $7,
+                class_applying_for = $8,
+                medium = $9,
+                father_name = $10,
+                father_mobile = $11,
+                mother_name = $12,
+                mother_mobile = $13,
+                guardian_name = $14,
+                emergency_contact = $15,
+                admission_status = $16,
+                admission_fee_mode = $17,
+                fees = $18,
+                discount = $19,
+                final_fee = $20
+            WHERE id = $21
+            RETURNING *
+          `,
+          [
+            cleanValue(body.student_name),
+            cleanValue(body.gender),
+            cleanValue(body.date_of_birth),
+            cleanValue(body.age),
+            cleanValue(body.blood_group),
+            cleanValue(body.nationality),
+            cleanValue(body.religion),
+            cleanValue(body.class_applying_for),
+            cleanValue(body.medium),
+            cleanValue(body.father_name),
+            cleanValue(body.father_mobile),
+            cleanValue(body.mother_name),
+            cleanValue(body.mother_mobile),
+            cleanValue(body.guardian_name),
+            cleanValue(body.emergency_contact),
+            cleanValue(body.admission_status) || "NEW",
+            cleanValue(body.admission_fee_mode),
+            fees,
+            discount,
+            finalFee,
+            admissionId,
+          ]
+        );
+
+        if (result.rowCount === 0) {
+          await client.query("ROLLBACK");
+          return res.status(404).json({
+            success: false,
+            error: "Admission not found",
+          });
+        }
+
+        const admission = result.rows[0];
+
+        if (admission.parent_id) {
+          await client.query(
+            `
+              UPDATE public.parents
+              SET father_name = $1,
+                  father_mobile = $2,
+                  mother_name = $3,
+                  mother_mobile = $4
+              WHERE id = $5
+            `,
+            [
+              cleanValue(body.father_name),
+              cleanValue(body.father_mobile),
+              cleanValue(body.mother_name),
+              cleanValue(body.mother_mobile),
+              admission.parent_id,
+            ]
+          );
+        }
+
+        await client.query(
+          `
+            UPDATE public.students
+            SET full_name = $1,
+                gender = $2,
+                date_of_birth = $3,
+                age = $4,
+                class = $5,
+                blood_group = $6,
+                nationality = $7,
+                religion = $8,
+                medium = $9
+            WHERE admission_id = $10
+          `,
+          [
+            cleanValue(body.student_name),
+            cleanValue(body.gender),
+            cleanValue(body.date_of_birth),
+            cleanValue(body.age),
+            cleanValue(body.class_applying_for),
+            cleanValue(body.blood_group),
+            cleanValue(body.nationality),
+            cleanValue(body.religion),
+            cleanValue(body.medium),
+            admissionId,
+          ]
+        );
+
+        await client.query("COMMIT");
+
+        return res.status(200).json({
+          success: true,
+          admission,
+        });
+      } catch (updateError) {
+        await client.query("ROLLBACK");
+        throw updateError;
       } finally {
         client.release();
       }

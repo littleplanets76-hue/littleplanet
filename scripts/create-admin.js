@@ -1,7 +1,28 @@
 const bcrypt = require("bcryptjs");
 const { Pool } = require("pg");
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+function getDatabaseUrl() {
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    return connectionString;
+  }
+
+  try {
+    const url = new URL(connectionString);
+    const sslMode = url.searchParams.get("sslmode");
+
+    if (["prefer", "require", "verify-ca"].includes(String(sslMode).toLowerCase())) {
+      url.searchParams.set("sslmode", "verify-full");
+    }
+
+    return url.toString();
+  } catch {
+    return connectionString;
+  }
+}
+
+const pool = new Pool({ connectionString: getDatabaseUrl() });
 
 async function query(text, params) {
   return pool.query(text, params);

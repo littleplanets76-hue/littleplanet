@@ -1,11 +1,11 @@
 import { Pool } from "pg";
+import { createPoolOptions } from "@/lib/postgresConfig";
 
 const pool =
   global.feeCollectPool ||
-  new Pool({
-    connectionString: process.env.DATABASE_URL,
+  new Pool(createPoolOptions({
     ssl: { rejectUnauthorized: false },
-  });
+  }));
 
 if (!global.feeCollectPool) {
   global.feeCollectPool = pool;
@@ -14,6 +14,28 @@ if (!global.feeCollectPool) {
 function cleanText(value) {
   const text = String(value ?? "").trim();
   return text || null;
+}
+
+function formatClassName(value) {
+  const className = String(value ?? "").trim();
+  const numericClass = className.match(/^(?:class\s*)?(\d+)$/i)?.[1];
+
+  if (!numericClass) {
+    return className;
+  }
+
+  const number = Number(numericClass);
+
+  if (number === 1) return "1st";
+  if (number === 2) return "2nd";
+  if (number === 3) return "3rd";
+
+  return `${number}th`;
+}
+
+function getClassNumber(value) {
+  const match = String(value ?? "").match(/\d+/);
+  return match?.[0] || "";
 }
 
 function normalizePhone(value) {
@@ -94,11 +116,19 @@ async function findStudentReference(client, body) {
       AND (
         $3::text IS NULL
         OR LOWER(TRIM(a.class_applying_for)) = LOWER(TRIM($3))
+        OR LOWER(TRIM(a.class_applying_for)) = LOWER(TRIM($4))
+        OR LOWER(TRIM(a.class_applying_for)) = LOWER(TRIM($5))
       )
     ORDER BY a.id DESC, s.id DESC
     LIMIT 1
     `,
-    [cleanText(body.student_name), parentPhone, cleanText(body.class_name)]
+    [
+      cleanText(body.student_name),
+      parentPhone,
+      cleanText(body.class_name),
+      cleanText(formatClassName(body.class_name)),
+      cleanText(getClassNumber(body.class_name)),
+    ]
   );
 
   return {
@@ -228,14 +258,16 @@ Payment Date: ${body.payment_date}
 Thank you.
 - SmartBooks AI`;
 
-  const response = await fetch(`${workerUrl}/api/messages/send-test`, {
+  const response = await fetch(`${workerUrl}/api/messages/enqueue`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-api-key": workerApiKey,
     },
     body: JSON.stringify({
+      recipient_name: body.student_name,
       recipient_phone: body.parent_mobile,
+      message_type: "FEE_PAYMENT_RECEIPT",
       message_text: message,
     }),
   });

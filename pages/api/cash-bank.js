@@ -1,14 +1,14 @@
 import { Pool } from "pg";
+import { createPoolOptions } from "@/lib/postgresConfig";
 
 const pool =
   global.pgPool ||
-  new Pool({
-    connectionString: process.env.DATABASE_URL,
+  new Pool(createPoolOptions({
     ssl:
       process.env.NODE_ENV === "production"
         ? { rejectUnauthorized: false }
         : false,
-  });
+  }));
 
 if (!global.pgPool) global.pgPool = pool;
 

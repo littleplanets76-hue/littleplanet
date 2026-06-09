@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function ParentsTable({ parents }) {
+export default function ParentsTable({ parents, onEdit }) {
   return (
     <div className="overflow-x-auto w-full">
       <table className="min-w-full bg-white border border-gray-200 rounded-lg text-xs md:text-sm">
@@ -12,6 +12,7 @@ export default function ParentsTable({ parents }) {
             <th className="py-2 px-4 text-center">Mother Name</th>
             <th className="py-2 px-4 text-center">Mother Mobile</th>
             <th className="py-2 px-4 text-center">Created At</th>
+            <th className="py-2 px-4 text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -24,11 +25,20 @@ export default function ParentsTable({ parents }) {
                 <td className="py-2 px-4 text-center">{parent.mother_name}</td>
                 <td className="py-2 px-4 text-center">{parent.mother_mobile}</td>
                 <td className="py-2 px-4 text-center">{formatDateTime(parent.created_at)}</td>
+                <td className="py-2 px-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => onEdit?.(parent)}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Edit
+                  </button>
+                </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="6" className="text-center py-4">No parent records found.</td>
+              <td colSpan="7" className="text-center py-4">No parent records found.</td>
             </tr>
           )}
         </tbody>
