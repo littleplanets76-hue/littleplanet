@@ -211,6 +211,22 @@ function formatMonthLabel(monthKey) {
 
 const SCHOOL_YEAR_START_MONTH = 5;
 
+function formatSchoolYearLabel(monthKey) {
+  const date = parseMonthKey(monthKey);
+
+  if (!date) {
+    return "this school year";
+  }
+
+  const startYear =
+    date.getMonth() >= SCHOOL_YEAR_START_MONTH
+      ? date.getFullYear()
+      : date.getFullYear() - 1;
+  const endYear = String(startYear + 1).slice(-2);
+
+  return `${startYear}-${endYear}`;
+}
+
 function getSchoolYearStartDate(referenceDate = new Date()) {
   const year = referenceDate.getFullYear();
   const startYear =
@@ -618,7 +634,7 @@ export default function FeesPage() {
 
   function buildWhatsAppMessage(item) {
     return `Dear Parent, this is a reminder that your child's school fee balance is pending for ${
-      month || "this month"
+      formatSchoolYearLabel(month)
     }.\n\nStudent: ${item.student_name || "-"}\nClass: ${
       getClassName(item) || "-"
     }\nBalance: ${formatCurrency(
