@@ -14,6 +14,36 @@ if (!global.pgPool) global.pgPool = pool;
 
 export default async function handler(req, res) {
   try {
+    if (req.method === "DELETE") {
+      const paymentId = Number(req.query.paymentId || req.query.id);
+
+      if (!Number.isInteger(paymentId) || paymentId <= 0) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Valid payment id is required" });
+      }
+
+      const deletedResult = await pool.query(
+        `
+        DELETE FROM public.fee_payments
+        WHERE id = $1
+        RETURNING id, admission_id, student_id, receipt_no, amount_paid
+        `,
+        [paymentId]
+      );
+
+      if (deletedResult.rowCount === 0) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Fee payment not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        deletedPayment: deletedResult.rows[0],
+      });
+    }
+
     if (req.method !== "GET") {
       return res.status(405).json({ success: false, error: "Method not allowed" });
     }
@@ -38,9 +68,10 @@ export default async function handler(req, res) {
         COALESCE(a.fees, 0)::numeric AS total_fee,
         COALESCE(SUM(fp.amount_paid), 0)::numeric AS paid_amount,
         (COALESCE(a.fees, 0) - COALESCE(SUM(fp.amount_paid), 0))::numeric AS balance_amount,
-        COALESCE(MAX(fp.payment_mode), a.admission_fee_mode, 'Cash') AS payment_mode,
-        MAX(fp.payment_date) AS latest_payment_date,
-        MAX(fp.receipt_no) AS latest_receipt_no,
+        COALESCE(latest_fp.payment_mode, a.admission_fee_mode, 'Cash') AS payment_mode,
+        latest_fp.id AS latest_payment_id,
+        latest_fp.payment_date AS latest_payment_date,
+        latest_fp.receipt_no AS latest_receipt_no,
         CASE
           WHEN COALESCE(SUM(fp.amount_paid), 0) = 0 THEN 'Pending'
           WHEN COALESCE(SUM(fp.amount_paid), 0) < COALESCE(a.fees, 0) THEN 'Partial'
@@ -54,10 +85,17 @@ export default async function handler(req, res) {
         ORDER BY id DESC
         LIMIT 1
       ) s ON true
+      LEFT JOIN LATERAL (
+        SELECT id, payment_mode, payment_date, receipt_no
+        FROM public.fee_payments
+        WHERE admission_id = a.id
+        ORDER BY payment_date DESC NULLS LAST, id DESC
+        LIMIT 1
+      ) latest_fp ON true
       LEFT JOIN public.fee_payments fp
         ON fp.admission_id = a.id
       WHERE a.fees IS NOT NULL
-      GROUP BY a.id, s.id
+      GROUP BY a.id, s.id, latest_fp.id, latest_fp.payment_mode, latest_fp.payment_date, latest_fp.receipt_no
       ORDER BY a.id DESC
     `);
 

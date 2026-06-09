@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaFileExcel, FaPlus } from "react-icons/fa";
+import { FaFileExcel, FaPlus, FaTrash } from "react-icons/fa";
 import { withAuthPage } from "@/lib/withAuthPage";
 import { downloadExcel } from "@/lib/exportToExcel";
 
@@ -164,6 +164,7 @@ export default function FeesPage() {
   const [autoNotify, setAutoNotify] = useState(true);
   const [entryError, setEntryError] = useState("");
   const [savingFee, setSavingFee] = useState(false);
+  const [deletingPaymentId, setDeletingPaymentId] = useState(null);
   const [phonePeLoading, setPhonePeLoading] = useState(false);
   const [phonePePayment, setPhonePePayment] = useState(null);
   const [copyLinkLabel, setCopyLinkLabel] = useState("Copy Link");
@@ -176,6 +177,7 @@ export default function FeesPage() {
   const [ledgerDueOnly, setLedgerDueOnly] = useState(false);
 
   const [ledgerPage, setLedgerPage] = useState(1);
+  const [feesVersion, setFeesVersion] = useState(0);
   const ledgerPageSize = 10;
 
   const classOptions = useMemo(() => {
@@ -303,7 +305,7 @@ export default function FeesPage() {
     return () => {
       isMounted = false;
     };
-  }, [month, autoNotify]);
+  }, [month, autoNotify, feesVersion]);
 
   const filteredLedgerRows = useMemo(() => {
     const search = ledgerSearch.trim().toLowerCase();
@@ -672,6 +674,54 @@ export default function FeesPage() {
       setEntryError(requestError.message || "Unable to save fee collection");
     } finally {
       setSavingFee(false);
+    }
+  }
+
+  async function deleteFeePayment(item) {
+    const paymentId = Number(item.latest_payment_id || 0);
+
+    setEntryError("");
+
+    if (!paymentId) {
+      setEntryError("No saved fee payment found for this admission.");
+      return;
+    }
+
+    const receiptText = item.latest_receipt_no
+      ? `receipt ${item.latest_receipt_no}`
+      : "the latest fee payment";
+    const ok = window.confirm(
+      `Delete ${receiptText} for ${item.student_name}? This will only remove the fee payment entry.`
+    );
+
+    if (!ok) {
+      return;
+    }
+
+    setDeletingPaymentId(paymentId);
+
+    try {
+      const response = await fetch(`/api/fees?paymentId=${paymentId}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Unable to delete fee payment");
+      }
+
+      setEntryError("Fee payment deleted.");
+      setEntries((current) =>
+        current.filter((entry) => entry.receipt_no !== item.latest_receipt_no)
+      );
+      setSelectedIds((current) =>
+        current.filter((id) => id !== item.admission_id)
+      );
+      setFeesVersion((current) => current + 1);
+    } catch (requestError) {
+      setEntryError(requestError.message || "Unable to delete fee payment");
+    } finally {
+      setDeletingPaymentId(null);
     }
   }
 
@@ -1416,6 +1466,22 @@ export default function FeesPage() {
                             <WhatsAppIcon />
                             WhatsApp
                           </button>
+                          {item.latest_payment_id ? (
+                            <button
+                              type="button"
+                              onClick={() => deleteFeePayment(item)}
+                              disabled={
+                                deletingPaymentId ===
+                                Number(item.latest_payment_id)
+                              }
+                              className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <FaTrash />
+                              {deletingPaymentId === Number(item.latest_payment_id)
+                                ? "Deleting..."
+                                : "Delete"}
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
