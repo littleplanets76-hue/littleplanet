@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 import { withAuthPage } from "@/lib/withAuthPage";
 
 export const getServerSideProps = withAuthPage({ path: "/assets" });
@@ -300,12 +301,20 @@ function QuantityAdjustModal({ open, asset, onClose, onSubmit, submitting }) {
 
   function submit() {
     if (!reduceQty || reduceQty <= 0) {
-      alert("Enter quantity to reduce.");
+      void Swal.fire({
+        icon: "warning",
+        title: "Quantity required",
+        text: "Enter quantity to reduce.",
+      });
       return;
     }
 
     if (reduceQty > currentQty) {
-      alert("Reduce quantity cannot be more than available quantity.");
+      void Swal.fire({
+        icon: "warning",
+        title: "Invalid quantity",
+        text: "Reduce quantity cannot be more than available quantity.",
+      });
       return;
     }
 
@@ -508,7 +517,11 @@ function MaintenanceModal({ open, asset, onClose, onSubmit, submitting }) {
 
   function submit() {
     if (!form.issue_reported) {
-      alert("Enter issue / repair details.");
+      void Swal.fire({
+        icon: "warning",
+        title: "Repair details required",
+        text: "Enter issue / repair details.",
+      });
       return;
     }
 
@@ -971,8 +984,17 @@ export default function AssetsPage() {
   }
 
   async function deleteAsset(item) {
-    const ok = window.confirm(`Delete ${item.asset_name}?`);
-    if (!ok) return;
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Delete asset?",
+      text: `Delete ${item.asset_name}?`,
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       const response = await fetch(`/api/assets?id=${item.id}`, {
@@ -985,9 +1007,21 @@ export default function AssetsPage() {
       }
 
       setMessage("Asset deleted successfully");
+      await Swal.fire({
+        icon: "success",
+        title: "Deleted",
+        text: "Asset deleted successfully.",
+        timer: 1400,
+        showConfirmButton: false,
+      });
       fetchAssets();
     } catch (error) {
       setMessage(error.message);
+      await Swal.fire({
+        icon: "error",
+        title: "Delete failed",
+        text: error.message || "Failed to delete asset",
+      });
     }
   }
 

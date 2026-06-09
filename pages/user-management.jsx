@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 import { withAuthPage } from "@/lib/withAuthPage";
 
 export const getServerSideProps = withAuthPage({ path: "/users" });
@@ -242,8 +243,17 @@ export default function UserManagementPage() {
   }
 
   async function deleteUser(user) {
-    const ok = window.confirm(`Delete user ${user.username}?`);
-    if (!ok) return;
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Delete user?",
+      text: `Delete user ${user.username}?`,
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       const res = await fetch(`/api/users?id=${user.id}`, {
@@ -255,9 +265,21 @@ export default function UserManagementPage() {
       if (!data.success) throw new Error(data.error || "Unable to delete user");
 
       setMessage("User deleted successfully");
+      await Swal.fire({
+        icon: "success",
+        title: "Deleted",
+        text: "User deleted successfully.",
+        timer: 1400,
+        showConfirmButton: false,
+      });
       fetchUsers();
     } catch (error) {
       setMessage(error.message);
+      await Swal.fire({
+        icon: "error",
+        title: "Delete failed",
+        text: error.message || "Unable to delete user",
+      });
     }
   }
 

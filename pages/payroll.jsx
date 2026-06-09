@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 import { withAuthPage } from "@/lib/withAuthPage";
 
 export const getServerSideProps = withAuthPage({ path: "/payroll" });
@@ -325,21 +326,48 @@ export default function PayrollPage() {
   }
 
   async function markPaid(row) {
-    const ok = window.confirm(`Mark salary paid for ${row.full_name}?`);
-    if (!ok) return;
-
-    const res = await fetch(`/api/payroll?id=${row.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        payment_status: "PAID",
-        payment_date: new Date().toISOString().slice(0, 10),
-        payment_mode: row.payment_mode || "Bank Transfer",
-      }),
+    const result = await Swal.fire({
+      icon: "question",
+      title: "Mark salary paid?",
+      text: `Mark salary paid for ${row.full_name}?`,
+      showCancelButton: true,
+      confirmButtonText: "Mark paid",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#16a34a",
     });
 
-    const data = await res.json();
-    if (data.success) fetchData();
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/payroll?id=${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payment_status: "PAID",
+          payment_date: new Date().toISOString().slice(0, 10),
+          payment_mode: row.payment_mode || "Bank Transfer",
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Unable to mark salary paid");
+
+      await Swal.fire({
+        icon: "success",
+        title: "Marked paid",
+        text: "Salary marked as paid.",
+        timer: 1400,
+        showConfirmButton: false,
+      });
+      fetchData();
+    } catch (error) {
+      setMessage(error.message);
+      await Swal.fire({
+        icon: "error",
+        title: "Update failed",
+        text: error.message || "Unable to mark salary paid",
+      });
+    }
   }
 
   const filteredPayroll = useMemo(() => {

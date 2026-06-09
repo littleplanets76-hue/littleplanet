@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 import { withAuthPage } from "@/lib/withAuthPage";
 export const getServerSideProps = withAuthPage({ path: "/staff" });
 
@@ -372,17 +373,38 @@ export default function StaffPage() {
   }
 
   async function deleteStaff(item) {
-    const ok = window.confirm(`Deactivate ${item.full_name}?`);
-    if (!ok) return;
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Deactivate staff?",
+      text: `Deactivate ${item.full_name}?`,
+      showCancelButton: true,
+      confirmButtonText: "Deactivate",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       const response = await fetch(`/api/staff?id=${item.id}`, { method: "DELETE" });
       const data = await response.json();
       if (!data.success) throw new Error(data.error || "Failed to delete staff");
       setMessage("Staff deactivated successfully");
+      await Swal.fire({
+        icon: "success",
+        title: "Deactivated",
+        text: "Staff deactivated successfully.",
+        timer: 1400,
+        showConfirmButton: false,
+      });
       fetchStaff();
     } catch (error) {
       setMessage(error.message);
+      await Swal.fire({
+        icon: "error",
+        title: "Update failed",
+        text: error.message || "Failed to delete staff",
+      });
     }
   }
 

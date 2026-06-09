@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaFileExcel, FaPlus, FaReceipt, FaSyncAlt, FaTrash } from "react-icons/fa";
+import Swal from "sweetalert2";
 import { withAuthPage } from "@/lib/withAuthPage";
 import { downloadExcel } from "@/lib/exportToExcel";
 
@@ -893,11 +894,17 @@ export default function FeesPage() {
     const receiptText = item.latest_receipt_no
       ? `receipt ${item.latest_receipt_no}`
       : "the latest fee payment";
-    const ok = window.confirm(
-      `Delete ${receiptText} for ${item.student_name}? This will only remove the fee payment entry.`
-    );
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Delete fee payment?",
+      text: `Delete ${receiptText} for ${item.student_name}? This will only remove the fee payment entry.`,
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
 
-    if (!ok) {
+    if (!result.isConfirmed) {
       return;
     }
 
@@ -914,6 +921,13 @@ export default function FeesPage() {
       }
 
       setEntryError("Fee payment deleted.");
+      await Swal.fire({
+        icon: "success",
+        title: "Deleted",
+        text: "Fee payment deleted successfully.",
+        timer: 1400,
+        showConfirmButton: false,
+      });
       setEntries((current) =>
         current.filter((entry) => entry.receipt_no !== item.latest_receipt_no)
       );
@@ -922,7 +936,13 @@ export default function FeesPage() {
       );
       setFeesVersion((current) => current + 1);
     } catch (requestError) {
-      setEntryError(requestError.message || "Unable to delete fee payment");
+      const message = requestError.message || "Unable to delete fee payment";
+      setEntryError(message);
+      await Swal.fire({
+        icon: "error",
+        title: "Delete failed",
+        text: message,
+      });
     } finally {
       setDeletingPaymentId(null);
     }

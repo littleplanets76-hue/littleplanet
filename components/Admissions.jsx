@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 import AdmissionModal from "./AdmissionModal";
 
 const BADGE_STYLES = {
@@ -128,9 +129,17 @@ export default function Admissions() {
     event.stopPropagation();
 
     const admissionName = admission.student_name || `Admission #${admission.id}`;
-    const ok = window.confirm(`Delete ${admissionName}? This will also delete the linked student and parent records.`);
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Delete admission?",
+      text: `Delete ${admissionName}? This will also delete the linked student and parent records.`,
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
 
-    if (!ok) return;
+    if (!result.isConfirmed) return;
 
     try {
       setDeletingId(admission.id);
@@ -146,12 +155,24 @@ export default function Admissions() {
       }
 
       setAdmissions((currentAdmissions) => currentAdmissions.filter((item) => item.id !== admission.id));
+      await Swal.fire({
+        icon: "success",
+        title: "Deleted",
+        text: "Admission deleted successfully.",
+        timer: 1400,
+        showConfirmButton: false,
+      });
 
       if (selectedAdmissionId === admission.id) {
         setSelectedAdmissionId(null);
       }
     } catch (deleteError) {
       setError(deleteError.message || "Unable to delete admission");
+      await Swal.fire({
+        icon: "error",
+        title: "Delete failed",
+        text: deleteError.message || "Unable to delete admission",
+      });
     } finally {
       setDeletingId(null);
     }
