@@ -70,6 +70,8 @@ export default async function handler(req, res) {
         (COALESCE(a.fees, 0) - COALESCE(SUM(fp.amount_paid), 0))::numeric AS balance_amount,
         COALESCE(latest_fp.payment_mode, a.admission_fee_mode, 'Cash') AS payment_mode,
         latest_fp.id AS latest_payment_id,
+        latest_fp.amount_paid AS latest_paid_amount,
+        latest_fp.reference_no AS latest_reference_no,
         latest_fp.payment_date AS latest_payment_date,
         latest_fp.receipt_no AS latest_receipt_no,
         CASE
@@ -86,7 +88,7 @@ export default async function handler(req, res) {
         LIMIT 1
       ) s ON true
       LEFT JOIN LATERAL (
-        SELECT id, payment_mode, payment_date, receipt_no
+        SELECT id, payment_mode, amount_paid, reference_no, payment_date, receipt_no
         FROM public.fee_payments
         WHERE admission_id = a.id
         ORDER BY payment_date DESC NULLS LAST, id DESC
@@ -95,7 +97,7 @@ export default async function handler(req, res) {
       LEFT JOIN public.fee_payments fp
         ON fp.admission_id = a.id
       WHERE a.fees IS NOT NULL
-      GROUP BY a.id, s.id, latest_fp.id, latest_fp.payment_mode, latest_fp.payment_date, latest_fp.receipt_no
+      GROUP BY a.id, s.id, latest_fp.id, latest_fp.payment_mode, latest_fp.amount_paid, latest_fp.reference_no, latest_fp.payment_date, latest_fp.receipt_no
       ORDER BY a.id DESC
     `);
 

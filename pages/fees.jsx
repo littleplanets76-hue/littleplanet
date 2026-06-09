@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaFileExcel, FaPlus, FaTrash } from "react-icons/fa";
+import { FaFileExcel, FaPlus, FaReceipt, FaTrash } from "react-icons/fa";
 import { withAuthPage } from "@/lib/withAuthPage";
 import { downloadExcel } from "@/lib/exportToExcel";
 
@@ -11,6 +11,113 @@ function formatCurrency(value) {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(Number(value) || 0);
+}
+
+function formatAmountPlain(value) {
+  return new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
+}
+
+function formatReceiptDate(value) {
+  const date = value ? new Date(value) : new Date();
+
+  if (Number.isNaN(date.getTime())) {
+    return new Date().toLocaleDateString("en-IN");
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function numberToWords(value) {
+  const number = Math.floor(Number(value) || 0);
+
+  if (number === 0) return "Zero";
+
+  const ones = [
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
+  ];
+
+  const tens = [
+    "",
+    "",
+    "Twenty",
+    "Thirty",
+    "Forty",
+    "Fifty",
+    "Sixty",
+    "Seventy",
+    "Eighty",
+    "Ninety",
+  ];
+
+  const convertBelowThousand = (num) => {
+    let words = "";
+    let n = num;
+
+    if (n >= 100) {
+      words += `${ones[Math.floor(n / 100)]} Hundred `;
+      n %= 100;
+    }
+
+    if (n >= 20) {
+      words += `${tens[Math.floor(n / 10)]} `;
+      n %= 10;
+    }
+
+    if (n > 0) {
+      words += `${ones[n]} `;
+    }
+
+    return words.trim();
+  };
+
+  let n = number;
+  let words = "";
+
+  if (n >= 10000000) {
+    words += `${convertBelowThousand(Math.floor(n / 10000000))} Crore `;
+    n %= 10000000;
+  }
+
+  if (n >= 100000) {
+    words += `${convertBelowThousand(Math.floor(n / 100000))} Lakh `;
+    n %= 100000;
+  }
+
+  if (n >= 1000) {
+    words += `${convertBelowThousand(Math.floor(n / 1000))} Thousand `;
+    n %= 1000;
+  }
+
+  if (n > 0) {
+    words += convertBelowThousand(n);
+  }
+
+  return words.trim();
 }
 
 function StatusBadge({ status }) {
@@ -165,6 +272,8 @@ export default function FeesPage() {
   const [entryError, setEntryError] = useState("");
   const [savingFee, setSavingFee] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState(null);
+  const [feeReceiptOpen, setFeeReceiptOpen] = useState(false);
+  const [feeReceiptData, setFeeReceiptData] = useState(null);
   const [phonePeLoading, setPhonePeLoading] = useState(false);
   const [phonePePayment, setPhonePePayment] = useState(null);
   const [copyLinkLabel, setCopyLinkLabel] = useState("Copy Link");
@@ -611,6 +720,24 @@ export default function FeesPage() {
         throw new Error(data.error || "Unable to save fee collection");
       }
 
+      const receiptSource =
+        rows.find(
+          (item) =>
+            String(item.admission_id) === String(entryForm.admission_id)
+        ) || {};
+      const receiptOverrides = {
+        admission_id: entryForm.admission_id,
+        student_id: entryForm.student_id,
+        student_name: entryForm.student_name,
+        class_name: entryForm.class_name,
+        father_mobile: entryForm.parent_mobile,
+        latest_receipt_no: data.receiptNo,
+        latest_payment_date: entryForm.date,
+        latest_paid_amount: Number(entryForm.amount_collected || 0),
+        payment_mode: entryForm.payment_mode,
+        latest_reference_no: entryForm.utr || "",
+      };
+
       setEntries((current) => [
         {
           id: Date.now(),
@@ -655,6 +782,16 @@ export default function FeesPage() {
         setMetrics(feesData.metrics || {});
         setMonthly(feesData.monthly || []);
         setLedgerPage(1);
+
+        const savedReceiptRow = (feesData.records || []).find(
+          (item) =>
+            String(item.admission_id) === String(entryForm.admission_id)
+        );
+
+        openFeeReceipt(savedReceiptRow || receiptSource, receiptOverrides);
+        setTimeout(() => {
+          void printFeeReceiptOnly();
+        }, 700);
 
         if (autoNotify) {
           setSelectedIds(
@@ -845,7 +982,196 @@ export default function FeesPage() {
     );
   }
 
+  function buildFeeReceiptData(item, overrides = {}) {
+    const paidAmount = Number(
+      overrides.latest_paid_amount ??
+        item.latest_paid_amount ??
+        item.amount_collected ??
+        0
+    );
+    const totalFee = Number(overrides.total_fee ?? item.total_fee ?? 0);
+    const totalPaid = Number(
+      overrides.paid_amount ?? item.paid_amount ?? paidAmount
+    );
+    const balanceAmount = Number(
+      overrides.balance_amount ??
+        item.balance_amount ??
+        Math.max(totalFee - totalPaid, 0)
+    );
+
+    return {
+      admission_id: overrides.admission_id ?? item.admission_id ?? "",
+      student_id: overrides.student_id ?? item.student_id ?? "",
+      student_name: overrides.student_name ?? item.student_name ?? "-",
+      father_name: overrides.father_name ?? item.father_name ?? "-",
+      father_mobile:
+        overrides.father_mobile ?? item.father_mobile ?? item.parent_mobile ?? "-",
+      class_name: overrides.class_name ?? getClassName(item) ?? "-",
+      receipt_no:
+        overrides.latest_receipt_no ??
+        overrides.receipt_no ??
+        item.latest_receipt_no ??
+        item.receipt_no ??
+        "PREVIEW",
+      payment_date:
+        overrides.latest_payment_date ??
+        overrides.payment_date ??
+        item.latest_payment_date ??
+        item.date ??
+        today,
+      payment_mode:
+        overrides.payment_mode ?? item.payment_mode ?? getPaymentMode(item) ?? "-",
+      reference_no:
+        overrides.latest_reference_no ??
+        overrides.reference_no ??
+        item.latest_reference_no ??
+        item.utr ??
+        "",
+      latest_paid_amount: paidAmount,
+      total_fee: totalFee,
+      paid_amount: totalPaid,
+      balance_amount: balanceAmount,
+    };
+  }
+
+  function openFeeReceipt(item, overrides = {}) {
+    setFeeReceiptData(buildFeeReceiptData(item, overrides));
+    setFeeReceiptOpen(true);
+  }
+
+  function closeFeeReceipt() {
+    setFeeReceiptOpen(false);
+    setFeeReceiptData(null);
+  }
+
+  async function printFeeReceiptOnly() {
+    const receiptElement = document.getElementById("fee-receipt-preview-source");
+
+    if (!receiptElement) {
+      setEntryError("Please open the fee receipt before printing.");
+      return;
+    }
+
+    const iframe = document.createElement("iframe");
+
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.opacity = "0";
+
+    document.body.appendChild(iframe);
+
+    const styles = Array.from(
+      document.querySelectorAll('link[rel="stylesheet"], style')
+    )
+      .map((node) => node.outerHTML)
+      .join("");
+
+    const printDocument = iframe.contentWindow.document;
+
+    printDocument.open();
+    printDocument.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          ${styles}
+          <style>
+            @page { size: A4 landscape; margin: 0; }
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 297mm !important;
+              height: 180mm !important;
+              max-height: 180mm !important;
+              overflow: hidden !important;
+              background: #ffffff !important;
+            }
+            * {
+              box-sizing: border-box !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .only-one-print-page {
+              width: 287mm !important;
+              height: 172mm !important;
+              max-height: 172mm !important;
+              margin: 5mm auto 0 auto !important;
+              padding: 0 !important;
+              overflow: hidden !important;
+              background: white !important;
+              page-break-after: avoid !important;
+              break-after: avoid-page !important;
+            }
+            .print-receipt-sheet {
+              display: grid !important;
+              grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+              gap: 5mm !important;
+              width: 100% !important;
+              height: 165mm !important;
+              max-height: 165mm !important;
+              overflow: hidden !important;
+              background: white !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .receipt-copy {
+              width: 100% !important;
+              height: 165mm !important;
+              max-height: 165mm !important;
+              overflow: hidden !important;
+              border: 2px solid #000 !important;
+              background: #fff !important;
+              color: #000 !important;
+              font-size: 8.8px !important;
+              line-height: 1.05 !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .receipt-logo {
+              display: block !important;
+              height: 22mm !important;
+              width: 105mm !important;
+              max-width: 105mm !important;
+              margin: 0 auto !important;
+              object-fit: contain !important;
+            }
+            .receipt-main-title {
+              font-size: 12px !important;
+              letter-spacing: 0.16em !important;
+              line-height: 1.1 !important;
+            }
+            .receipt-p-1 { padding: 2px 4px !important; }
+            .receipt-p-2 { padding: 3px 5px !important; }
+            .receipt-row-label { width: 100% !important; }
+            .no-print { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <main class="only-one-print-page">
+            ${receiptElement.innerHTML}
+          </main>
+        </body>
+      </html>
+    `);
+    printDocument.close();
+
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(() => {
+        iframe.parentNode?.removeChild(iframe);
+      }, 1000);
+    }, 400);
+  }
+
   return (
+    <>
     <div className="min-h-screen bg-slate-100 p-4 md:p-6">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
@@ -1469,6 +1795,16 @@ export default function FeesPage() {
                           {item.latest_payment_id ? (
                             <button
                               type="button"
+                              onClick={() => openFeeReceipt(item)}
+                              className="inline-flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-100"
+                            >
+                              <FaReceipt />
+                              Receipt
+                            </button>
+                          ) : null}
+                          {item.latest_payment_id ? (
+                            <button
+                              type="button"
                               onClick={() => deleteFeePayment(item)}
                               disabled={
                                 deletingPaymentId ===
@@ -1514,6 +1850,15 @@ export default function FeesPage() {
         </div>
       </div>
     </div>
+
+    {feeReceiptOpen && feeReceiptData ? (
+      <FeeReceiptPreviewModal
+        data={feeReceiptData}
+        onClose={closeFeeReceipt}
+        onPrint={printFeeReceiptOnly}
+      />
+    ) : null}
+    </>
   );
 }
 
@@ -1571,6 +1916,203 @@ function LedgerPagination({
           Next
         </button>
       </div>
+    </div>
+  );
+}
+
+function FeeReceiptPreviewModal({ data, onClose, onPrint }) {
+  return (
+    <div className="receipt-modal-shell fixed inset-0 z-50 overflow-auto bg-black/60 p-4 backdrop-blur-sm">
+      <div className="receipt-modal-card mx-auto max-w-7xl rounded-2xl bg-white shadow-2xl">
+        <div className="no-print flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-black text-slate-900">
+              Fee Receipt
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Check the paid fee entry and print the parent copy.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Close
+            </button>
+
+            <button
+              type="button"
+              onClick={onPrint}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black"
+            >
+              Print
+            </button>
+          </div>
+        </div>
+
+        <div id="fee-receipt-preview-source" className="receipt-print-area bg-white p-4">
+          <FeeReceiptSheet data={data} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeeReceiptSheet({ data }) {
+  return (
+    <div className="print-receipt-sheet grid gap-6 md:grid-cols-2">
+      <FeeReceiptCopy data={data} copyLabel="School Copy" />
+      <FeeReceiptCopy data={data} copyLabel="Parent Copy" />
+    </div>
+  );
+}
+
+function FeeReceiptCopy({ data, copyLabel }) {
+  const paidAmount = Number(data?.latest_paid_amount || 0);
+  const totalFee = Number(data?.total_fee || 0);
+  const totalPaid = Number(data?.paid_amount || 0);
+  const balanceAmount = Number(data?.balance_amount || 0);
+  const registrationNo = data?.admission_id
+    ? `LP-${String(data.admission_id).padStart(5, "0")}`
+    : "-";
+
+  return (
+    <div className="receipt-copy border-2 border-black bg-white text-[11px] leading-tight text-black">
+      <div className="receipt-p-2 border-b-2 border-black text-center">
+        <img
+          src="/logo.jpg"
+          alt="School Logo"
+          className="receipt-logo h-28 w-[420px] object-contain"
+        />
+
+        <div className="mt-2 border-y-2 border-black py-1">
+          <h2 className="receipt-main-title text-xl font-black tracking-[0.15em]">
+            FEE PAYMENT RECEIPT
+          </h2>
+        </div>
+
+        <p className="mt-1 text-[10px] font-black uppercase tracking-[0.28em]">
+          {copyLabel}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 border-b border-black">
+        <div className="receipt-p-1 border-r border-black">
+          <span className="font-black">Receipt No.</span>
+          <span className="ml-2 font-bold">{data?.receipt_no || "-"}</span>
+        </div>
+
+        <div className="receipt-p-1">
+          <span className="font-black">Date :</span>
+          <span className="ml-2 font-bold">
+            {formatReceiptDate(data?.payment_date)}
+          </span>
+        </div>
+      </div>
+
+      <FeeReceiptRow label="Regn No." value={registrationNo} />
+      <FeeReceiptRow label="Student Name" value={data?.student_name || "-"} />
+      <FeeReceiptRow label="Father's Name" value={data?.father_name || "-"} />
+      <FeeReceiptRow label="Father Mobile" value={data?.father_mobile || "-"} />
+
+      <div className="border-b border-black">
+        <div className="receipt-p-1">
+          <span className="font-black">Class / Standard</span>
+          <span className="ml-2 font-bold">{data?.class_name || "-"}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[1fr_95px] border-b border-black">
+        <div className="receipt-p-1 border-r border-black text-center font-black">
+          Fee Payment Details
+        </div>
+
+        <div className="receipt-p-1 text-center font-black">Amount</div>
+      </div>
+
+      <div className="grid grid-cols-[1fr_95px] border-b border-black">
+        <div className="receipt-p-2 border-r border-black">
+          <p className="font-black">School Fee Payment</p>
+          <p className="mt-1 text-[10px]">
+            Payment Mode: {data?.payment_mode || "-"}
+          </p>
+          {data?.reference_no ? (
+            <p className="mt-1 text-[10px]">
+              Reference / UTR: {data.reference_no}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="receipt-p-2 flex items-center justify-end font-black">
+          {formatAmountPlain(paidAmount)}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[1fr_95px] border-b border-black bg-gray-200">
+        <div className="receipt-p-1 border-r border-black font-black">
+          Current Payment Paid
+        </div>
+
+        <div className="receipt-p-1 text-right font-black">
+          {formatAmountPlain(paidAmount)}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[1fr_95px] border-b border-black">
+        <div className="receipt-p-2 border-r border-black">
+          <div className="space-y-1 pl-8 font-black">
+            <p>Total Fee</p>
+            <p>Total Paid</p>
+            <p>Balance Fee</p>
+          </div>
+        </div>
+
+        <div className="receipt-p-2 text-right font-black">
+          <div className="space-y-1">
+            <p>{formatAmountPlain(totalFee)}</p>
+            <p>{formatAmountPlain(totalPaid)}</p>
+            <p>{formatAmountPlain(balanceAmount)}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="receipt-p-1 border-b border-black font-black">
+        Rupees {numberToWords(paidAmount)} Only
+      </div>
+
+      <div className="receipt-p-1 border-b border-black">
+        <p className="font-black">Fee Note:</p>
+        <p className="mt-1 text-[10px] font-semibold">
+          This receipt confirms the fee payment recorded for the above student.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 text-[10px]">
+        <div className="receipt-p-1">
+          <p className="font-black">Note:</p>
+          <p>Fee once paid will be recorded in school accounts.</p>
+        </div>
+
+        <div className="receipt-p-1 text-right">
+          <div className="mt-5 border-t border-black pt-1 font-black">
+            Authorized Signature
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeeReceiptRow({ label, value }) {
+  return (
+    <div className="grid grid-cols-[110px_1fr] border-b border-black">
+      <div className="receipt-row-label receipt-p-1 border-r border-black font-black">
+        {label}
+      </div>
+      <div className="receipt-p-1 font-bold">{value}</div>
     </div>
   );
 }
