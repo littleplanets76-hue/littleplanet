@@ -831,7 +831,7 @@ export default function FeesPage() {
       setEntryError(
         data.whatsappSent
           ? "Fee saved and WhatsApp receipt sent."
-          : "Fee saved, but WhatsApp failed."
+          : data.error || "Fee saved, but WhatsApp failed."
       );
 
       const params = new URLSearchParams();

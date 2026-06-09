@@ -247,6 +247,22 @@ async function sendWhatsAppReceipt(body, receiptNo) {
     throw new Error("WhatsApp worker env variables missing");
   }
 
+  const baseUrl = workerUrl.replace(/\/+$/, "");
+  const statusResponse = await fetch(`${baseUrl}/status`, {
+    headers: {
+      "x-api-key": workerApiKey,
+    },
+  });
+  const statusData = await statusResponse.json().catch(() => null);
+
+  if (!statusResponse.ok || statusData?.ok === false) {
+    throw new Error(statusData?.error || "WhatsApp worker status failed");
+  }
+
+  if (!statusData?.whatsapp?.connected) {
+    throw new Error("WhatsApp is not connected. Scan the QR before sending receipts.");
+  }
+
   const amount = formatAmount(body.amount_paid);
   const message = `Dear Parent, we have received the school fee payment of ₹${amount} for ${body.student_name}.
 
@@ -258,7 +274,7 @@ Payment Date: ${body.payment_date}
 Thank you.
 - SmartBooks AI`;
 
-  const response = await fetch(`${workerUrl}/api/messages/enqueue`, {
+  const response = await fetch(`${baseUrl}/api/messages/enqueue`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -367,7 +383,7 @@ export default async function handler(req, res) {
       paymentSaved: true,
       whatsappSent: false,
       receiptNo,
-      error: "Fee saved, but WhatsApp failed",
+      error: error.message || "Fee saved, but WhatsApp failed",
     });
   }
 }
