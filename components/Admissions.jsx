@@ -48,6 +48,7 @@ export default function Admissions() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [selectedAdmissionId, setSelectedAdmissionId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -121,6 +122,39 @@ export default function Admissions() {
     );
   }, [admissions]);
 
+  async function deleteAdmission(event, admission) {
+    event.stopPropagation();
+
+    const admissionName = admission.student_name || `Admission #${admission.id}`;
+    const ok = window.confirm(`Delete ${admissionName}? This will also delete the linked student and parent records.`);
+
+    if (!ok) return;
+
+    try {
+      setDeletingId(admission.id);
+      setError("");
+
+      const response = await fetch(`/api/admission?id=${admission.id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Unable to delete admission");
+      }
+
+      setAdmissions((currentAdmissions) => currentAdmissions.filter((item) => item.id !== admission.id));
+
+      if (selectedAdmissionId === admission.id) {
+        setSelectedAdmissionId(null);
+      }
+    } catch (deleteError) {
+      setError(deleteError.message || "Unable to delete admission");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div >
       <AdmissionModal admissionId={selectedAdmissionId} onClose={() => setSelectedAdmissionId(null)} />
@@ -185,7 +219,8 @@ export default function Admissions() {
                     <th className="border-b border-slate-200 px-4 py-3">Status</th>
 <th className="border-b border-slate-200 px-4 py-3">Total Fees</th>
 <th className="border-b border-slate-200 px-4 py-3">Discount</th>
-<th className="border-b border-slate-200 px-4 py-3">Final Fee</th>                  </tr>
+<th className="border-b border-slate-200 px-4 py-3">Final Fee</th>
+<th className="border-b border-slate-200 px-4 py-3">Actions</th>                  </tr>
                 </thead>
                 <tbody>
                   {filteredAdmissions.map((admission) => (
@@ -218,6 +253,16 @@ export default function Admissions() {
 
 <td className="border-b border-slate-100 px-4 py-4 text-sm font-black text-emerald-700">
   {formatCurrency(admission.final_fee)}
+</td>
+<td className="border-b border-slate-100 px-4 py-4">
+  <button
+    type="button"
+    onClick={(event) => deleteAdmission(event, admission)}
+    disabled={deletingId === admission.id}
+    className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    {deletingId === admission.id ? "Deleting..." : "Delete"}
+  </button>
 </td>
                     </tr>
                   ))}

@@ -94,6 +94,70 @@ export default async function handler(req, res) {
       });
     }
 
+    if (req.method === "DELETE") {
+      const admissionId = Number(req.query.id);
+
+      if (!Number.isInteger(admissionId) || admissionId <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Valid admission id is required",
+        });
+      }
+
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+
+        const admissionResult = await client.query(
+          "SELECT id, parent_id FROM public.admissions WHERE id = $1 FOR UPDATE",
+          [admissionId]
+        );
+
+        const admission = admissionResult.rows[0];
+
+        if (!admission) {
+          await client.query("ROLLBACK");
+          return res.status(404).json({
+            success: false,
+            error: "Admission not found",
+          });
+        }
+
+        await client.query("DELETE FROM public.fee_payments WHERE admission_id = $1", [admissionId]);
+        await client.query("DELETE FROM public.students WHERE admission_id = $1", [admissionId]);
+        await client.query("DELETE FROM public.admissions WHERE id = $1", [admissionId]);
+
+        if (admission.parent_id) {
+          await client.query(
+            `
+              DELETE FROM public.parents p
+              WHERE p.id = $1
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM public.admissions a
+                  WHERE a.parent_id = p.id
+                )
+            `,
+            [admission.parent_id]
+          );
+        }
+
+        await client.query("COMMIT");
+
+        return res.status(200).json({
+          success: true,
+          deletedAdmissionId: admissionId,
+          deletedParentId: admission.parent_id || null,
+        });
+      } catch (deleteError) {
+        await client.query("ROLLBACK");
+        throw deleteError;
+      } finally {
+        client.release();
+      }
+    }
+
     if (req.method !== "POST") {
       return res.status(405).json({
         success: false,
