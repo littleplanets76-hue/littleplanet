@@ -52,7 +52,7 @@ function PositivePrimeLogo() {
 function MobileLoginLogo() {
   return (
     <div className="mb-4 flex justify-center sm:mb-6 lg:hidden">
-      <div className="relative h-20 w-28 sm:h-44 sm:w-52">
+      <div className="relative h-40 w-48 sm:h-44 sm:w-52">
         <Image
           src="/accountslogo.png"
           alt="SmartBooks AI Logo"
